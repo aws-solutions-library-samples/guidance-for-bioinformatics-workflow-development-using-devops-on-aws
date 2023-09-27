@@ -17,13 +17,13 @@ phases:
   pre_build:
     commands:
       - env
-      - cd src/workflow/nextflow-rnaseq
+      - export WFPATH=src/workflow/nextflow-rnaseq
       - ls
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
   build:
     commands:
       - zip -R workflow.zip *
-      - aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow-parameters.json --name ${workflow_name}-${workflow_version} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR
+      - aws omics create-workflow --definition-zip fileb://${WFPATH}/workflow.zip --parameter-template file://${WFPATH}/workflow-parameters.json --name ${workflow_name}-${workflow_version} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR
   post_build:
     commands:
       - aws omics list-workflows --type PRIVATE --name ${workflow_name}-${workflow_version}
