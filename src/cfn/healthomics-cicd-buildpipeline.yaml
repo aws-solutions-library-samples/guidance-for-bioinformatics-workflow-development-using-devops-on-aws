@@ -15,7 +15,11 @@ Resources:
       Description: aws HealthOmics Basic Workflow
       ServiceRole: !Ref CodeBuildRoleArn
       Artifacts:
-        Type: no_artifacts
+        Type: S3
+        Location: !Ref S3BucketName
+        Path: artifacts/HealthOmics/
+        NamespaceType: BUILD_ID
+        Name: output
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
