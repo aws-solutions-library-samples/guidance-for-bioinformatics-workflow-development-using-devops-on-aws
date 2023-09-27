@@ -17,6 +17,7 @@ phases:
   pre_build:
     commands:
       - env
+      - cd src/workflow/nextflow-rnaseq
       - ls
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
   build:
