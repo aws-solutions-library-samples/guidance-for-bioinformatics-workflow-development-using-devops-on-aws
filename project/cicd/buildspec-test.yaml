@@ -1,0 +1,20 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      golang: latest
+      docker: latest
+  pre_build:
+    commands:
+      - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.4.0.2170-linux.zip
+      - mkdir -p /opt/sonarqube
+      - unzip ./sonar-scanner-cli-4.4.0.2170-linux.zip -d /opt/
+      - export PATH=$PATH:/opt/sonar-scanner-4.4.0.2170-linux/bin/
+  build:
+    commands:
+      - echo /opt/sonar-scanner-4.4.0.2170-linux/bin/sonar-scanner -Dsonar.projectKey=$Project -Dsonar.host.url=$HOST -Dsonar.organization=$Organization -Dsonar.sources=src/ -Dsonar.login=$LOGIN
+      - sleep 5
+      - curl https://sonarcloud.io/api/qualitygates/project_status?projectKey=$Project >result.json
+      - cat result.json
+      - if [ $(jq -r '.projectStatus.status' result.json) = ERROR ] ; then $CODEBUILD_BUILD_SUCCEEDING -eq 0 ;fi

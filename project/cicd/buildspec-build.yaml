@@ -1,0 +1,39 @@
+version: 0.2
+
+env:
+  variables:
+    workflow_name: RNAseqQC
+    workflow_version: 1.0.0
+    artifact_bucket: rnaseq-artifacts
+    workflow_engine: NEXTFLOW
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo "OS Environment Setup"
+      - yum install awscli -y
+      - pip3 install boto3
+  pre_build:
+    commands:
+      - env
+      - export BASEDIR="${PWD}"
+      - export WFDIR="workflow/nextflow-rnaseq"
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+  build:
+    commands:
+      - cd $WFDIR
+      - zip -R workflow.zip *
+      - mv workflow.zip $BASEDIR
+      - cd $BASEDIR
+      - pwd
+      - ls -l
+      - aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-${workflow_version} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR
+  post_build:
+    commands:
+      - aws omics list-workflows --type PRIVATE --name ${workflow_name}-${workflow_version}
+
+artifacts:
+  files:
+    - workflow.zip
+  name: ${workflow_name}-v${workflow-version}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION
