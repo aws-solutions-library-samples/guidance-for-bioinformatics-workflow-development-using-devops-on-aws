@@ -23,7 +23,7 @@ phases:
   build:
     commands:
       - cd $WFDIR
-      - zip -R workflow.zip *
+      - zip -r workflow.zip ./*
       - mv workflow.zip $BASEDIR
       - cd $BASEDIR
       - pwd
