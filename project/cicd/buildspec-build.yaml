@@ -28,6 +28,9 @@ phases:
       - cd $BASEDIR
       - pwd
       - ls -l
+      - echo "Reading image dependencies..."
+      - echo "Uploading images to ECR..."
+      - echo "Creating Workflow..."
       - aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-${workflow_version} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR
   post_build:
     commands:
