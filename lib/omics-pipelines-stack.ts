@@ -4,13 +4,8 @@ import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codecommit from 'aws-cdk-lib/aws-codecommit';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import * as codedeploy from 'aws-cdk-lib/aws-codedeploy';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecspatterns from 'aws-cdk-lib/aws-ecs-patterns';
-import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as path from 'path';
 
 
@@ -25,11 +20,6 @@ export class OmicsPipelinesStack extends Stack {
       code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), 'main'),
     })
 
-    const workflowsCicdRepo = new codecommit.Repository(this, 'workflows_cicd_git', {
-      repositoryName: 'healthomics-cicd',
-      code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/cicd'), 'main'),
-    })
-
     // ECR Repository
 
     const ecrRepo = new ecr.Repository(this, 'healthomics_ecr', {
@@ -38,15 +28,6 @@ export class OmicsPipelinesStack extends Stack {
     });
 
     // IAM Roles
-
-    const codeDeployRole = new iam.Role(this, 'codeDeployRole', {
-      assumedBy: new iam.ServicePrincipal('codedeploy.amazonaws.com'),
-      description: 'CodeDeploy standard Role',
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
-        iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeDeployRoleForECS"),
-      ],
-    });
 
     const codeBuildRole = new iam.Role(this, 'codeBuildRole', {
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
@@ -88,7 +69,17 @@ export class OmicsPipelinesStack extends Stack {
     });
 
 
-    //// Build Pipeline
+
+    // Should we use 3 pipelines?
+    //  - 1: Deploy Pipeline for CICD elements (buld, deploy pipelines)
+    //  - 2: Build Pipeline for building and testing of healthomics workflows
+    //  - 3: Deploy Pipeline for healthomics workflows
+    // We'd rather use 2 pipelines:
+    //  - 1: Build pipeline, dynamic, using build definition from repo https://medium.com/andy-le/building-a-dynamic-aws-pipeline-with-cdk-5d5426fc0493
+    //  - 2: Deploy pipeline
+
+
+    //// Build Pipeline (2)
 
     const buildPipeline = new codepipeline.Pipeline(this, 'workflows_build_pipeline', {
       crossAccountKeys: false, // so no AWS KMS CMK is created
@@ -155,3 +146,8 @@ export class OmicsPipelinesStack extends Stack {
   }
 
 }
+
+//// Deploy Pipeline for healthomics workflows (3)
+
+
+// Deploy pipeline approval stage

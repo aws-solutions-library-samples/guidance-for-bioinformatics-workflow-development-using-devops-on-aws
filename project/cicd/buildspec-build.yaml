@@ -3,7 +3,8 @@ version: 0.2
 env:
   variables:
     workflow_name: RNAseqQC
-    workflow_version: 1.0.0
+    workflow_major_version: 1
+    workflow_minor_version: 0
     artifact_bucket: rnaseq-artifacts
     workflow_engine: NEXTFLOW
 phases:
@@ -28,10 +29,13 @@ phases:
       - cd $BASEDIR
       - pwd
       - ls -l
+      - LASTPATCHVER=$(./cicd/scripts/getlastpatch.sh)
+      - NEWPATCHVER=$((LASTPATCHVER+1))
+      - TAGNAME=$(./cicd/scripts/tagcommit.sh ${LASTPATCHVER})
       - echo "Reading image dependencies..."
       - echo "Uploading images to ECR..."
       - echo "Creating Workflow..."
-      - aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-${workflow_version} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR
+      - aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEWPATCHVER
   post_build:
     commands:
       - aws omics list-workflows --type PRIVATE --name ${workflow_name}-${workflow_version}
