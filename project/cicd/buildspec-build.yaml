@@ -7,6 +7,8 @@ env:
     workflow_minor_version: 0
     artifact_bucket: rnaseq-artifacts
     workflow_engine: NEXTFLOW
+  shell: bash
+  git-credential-helper: yes
 phases:
   install:
     runtime-versions:
@@ -15,12 +17,15 @@ phases:
       - echo "OS Environment Setup"
       - yum install awscli -y
       - pip3 install boto3
+      - pip install git-remote-codecommit
   pre_build:
     commands:
       - env
       - export BASEDIR="${PWD}"
       - export WFDIR="workflow/nextflow-rnaseq"
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
   build:
     commands:
       - cd $WFDIR
@@ -29,9 +34,10 @@ phases:
       - cd $BASEDIR
       - pwd
       - ls -l
+      - chmod +x ./cicd/scripts/*.sh
       - LASTPATCHVER=$(./cicd/scripts/getlastpatch.sh)
       - NEWPATCHVER=$((LASTPATCHVER+1))
-      - TAGNAME=$(./cicd/scripts/tagcommit.sh ${LASTPATCHVER})
+      - TAGNAME=$(./cicd/scripts/tagcommit.sh ${NEWPATCHVER})
       - echo "Reading image dependencies..."
       - echo "Uploading images to ECR..."
       - echo "Creating Workflow..."

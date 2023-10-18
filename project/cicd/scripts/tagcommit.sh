@@ -13,7 +13,8 @@ if [ ! -z ${NEWPATCHVER}  ] && [ ! -z ${workflow_major_version} ] && [ ! -z ${wo
 then
       TAGNAME="${CURRBRANCH}-${workflow_major_version}.${workflow_minor_version}.${NEWPATCHVER}"
       echo "${TAGNAME}"
-      git tag -a ${TAGNAME} $CODEBUILD_RESOLVED_SOURCE_VERSION
+      git tag -a ${TAGNAME} -m "CodeBuild generated tag" $CODEBUILD_RESOLVED_SOURCE_VERSION
+      git push origin --tags
 else
       exit 1
 fi

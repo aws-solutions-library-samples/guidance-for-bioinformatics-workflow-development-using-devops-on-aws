@@ -34,6 +34,7 @@ export class OmicsPipelinesStack extends Stack {
       description: 'CodeBuild standard Role',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeCommitPowerUser"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
       ],
     });
@@ -101,6 +102,7 @@ export class OmicsPipelinesStack extends Stack {
       repository: workflowsCodeRepo,
       output: sourceOutput,
       branch: 'main',
+      codeBuildCloneOutput: true, // clone full git repo to handle tags
       trigger: codepipeline_actions.CodeCommitTrigger.POLL, // disable CloudWatch events
     });
 
