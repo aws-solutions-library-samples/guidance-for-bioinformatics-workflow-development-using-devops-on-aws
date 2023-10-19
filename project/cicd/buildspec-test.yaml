@@ -1,20 +1,34 @@
 version: 0.2
 
+env:
+  variables:
+    workflow_name: RNAseqQC
+    workflow_major_version: 1
+    workflow_minor_version: 0
+    artifact_bucket: rnaseq-artifacts
+    workflow_engine: NEXTFLOW
+  shell: bash
+  git-credential-helper: yes
 phases:
   install:
     runtime-versions:
-      golang: latest
-      docker: latest
+      python: 3.11
+    commands:
+      - echo "OS Environment Setup"
+      - yum install awscli -y
+      - pip3 install boto3
+      - pip install git-remote-codecommit
   pre_build:
     commands:
-      - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.4.0.2170-linux.zip
-      - mkdir -p /opt/sonarqube
-      - unzip ./sonar-scanner-cli-4.4.0.2170-linux.zip -d /opt/
-      - export PATH=$PATH:/opt/sonar-scanner-4.4.0.2170-linux/bin/
+      - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
+      - export BASEDIR="${PWD}"
+      - export WFDIR="workflow/nextflow-rnaseq"
+      - env      
+      - chmod +x $BASEDIR/cicd/scripts/*.sh
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
   build:
     commands:
-      - echo /opt/sonar-scanner-4.4.0.2170-linux/bin/sonar-scanner -Dsonar.projectKey=$Project -Dsonar.host.url=$HOST -Dsonar.organization=$Organization -Dsonar.sources=src/ -Dsonar.login=$LOGIN
-      - sleep 5
-      - curl https://sonarcloud.io/api/qualitygates/project_status?projectKey=$Project >result.json
-      - cat result.json
-      - if [ $(jq -r '.projectStatus.status' result.json) = ERROR ] ; then $CODEBUILD_BUILD_SUCCEEDING -eq 0 ;fi
+      - echo "TODO --> Launch workflow deployed in previous step"
+      - echo " Decide wether to do it locally, or using healthomics (way longer run time)"

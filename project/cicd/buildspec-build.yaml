@@ -12,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      python: 3.9
+      python: 3.11
     commands:
       - echo "OS Environment Setup"
       - yum install awscli -y
@@ -20,24 +20,26 @@ phases:
       - pip install git-remote-codecommit
   pre_build:
     commands:
-      - env
+      - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
       - export BASEDIR="${PWD}"
       - export WFDIR="workflow/nextflow-rnaseq"
+      - env      
+      - chmod +x $BASEDIR/cicd/scripts/*.sh
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
       - git config --global user.email "CodeBuild@example.com"
       - git config --global user.name "CodeBuild"
   build:
     commands:
+      - bash -x $BASEDIR/cicd/scripts/importimages.sh
       - cd $WFDIR
       - zip -r workflow.zip ./*
       - mv workflow.zip $BASEDIR
       - cd $BASEDIR
       - pwd
       - ls -l
-      - chmod +x ./cicd/scripts/*.sh
-      - LASTPATCHVER=$(./cicd/scripts/getlastpatch.sh)
+      - LASTPATCHVER=$($BASEDIR/cicd/scripts/getlastpatch.sh)
       - NEWPATCHVER=$((LASTPATCHVER+1))
-      - TAGNAME=$(./cicd/scripts/tagcommit.sh ${NEWPATCHVER})
+      - TAGNAME=$($BASEDIR/cicd/scripts/tagcommit.sh ${NEWPATCHVER})
       - echo "Reading image dependencies..."
       - echo "Uploading images to ECR..."
       - echo "Creating Workflow..."

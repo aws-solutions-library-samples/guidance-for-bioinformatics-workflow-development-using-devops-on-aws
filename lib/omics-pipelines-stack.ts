@@ -27,7 +27,36 @@ export class OmicsPipelinesStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY, //change if you want to retain the repo
     });
 
-    // IAM Roles
+    // IAM Resources
+    //   IAM Custom Policies
+    const cdkDeployPolicy = new iam.PolicyDocument({
+      statements: [new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'sts:AssumeRole',
+          'iam:PassRole',
+        ],
+        resources: [
+          'arn:aws:iam::*:role/cdk-readOnlyRole',
+          'arn:aws:iam::*:role/cdk-hnb659fds-deploy-role-*',
+          'arn:aws:iam::*:role/cdk-hnb659fds-file-publishing-*'
+          ]
+      })],
+    });
+
+    const stepFunctCallPolicy = new iam.PolicyDocument({
+      statements: [new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'states:StartExecution',
+        ],
+        resources: [
+          'arn:aws:states:*:*:stateMachine:omx-container-puller'
+          ]
+      })],
+    });
+    
+    //   IAM Roles
 
     const codeBuildRole = new iam.Role(this, 'codeBuildRole', {
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
@@ -36,7 +65,12 @@ export class OmicsPipelinesStack extends Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeCommitPowerUser"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonSSMReadOnlyAccess"),
       ],
+      inlinePolicies: {
+        CdkDeployPolicy: cdkDeployPolicy,
+        StepFunctionCallPolicy: stepFunctCallPolicy
+      },
     });
 
 
@@ -46,7 +80,7 @@ export class OmicsPipelinesStack extends Stack {
       buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-build.yaml'),
       role: codeBuildRole,
       environment: {
-        buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:3.0'),
+        buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
         privileged: true, // needed to connect to the Docker daemon for building the image
       },
     });
@@ -55,7 +89,7 @@ export class OmicsPipelinesStack extends Stack {
       buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-test.yaml'),
       role: codeBuildRole,
       environment: {
-        buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:3.0'),
+        buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
         privileged: true, // needed to connect to the Docker daemon for building the image
       },
     });
@@ -64,7 +98,7 @@ export class OmicsPipelinesStack extends Stack {
       buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-upload.yaml'),
       role: codeBuildRole,
       environment: {
-        buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:3.0'),
+        buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
         privileged: true, // needed to connect to the Docker daemon for building the image
       },
     });
@@ -103,7 +137,7 @@ export class OmicsPipelinesStack extends Stack {
       output: sourceOutput,
       branch: 'main',
       codeBuildCloneOutput: true, // clone full git repo to handle tags
-      trigger: codepipeline_actions.CodeCommitTrigger.POLL, // disable CloudWatch events
+      trigger: codepipeline_actions.CodeCommitTrigger.EVENTS,
     });
 
     sourceStage.addAction(sourceAction);
