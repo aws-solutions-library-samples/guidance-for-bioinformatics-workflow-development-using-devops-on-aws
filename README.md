@@ -13,7 +13,7 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 * `cdk diff`        compare deployed stack with current state
 * `cdk synth`       emits the synthesized CloudFormation template
 
-## Commands used to bootstrap
+## cdk bootstrapping
 
 Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).
 These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.
@@ -64,6 +64,7 @@ The same applies to artifact tags. this is the list we are using:
 The workflow, major and minor version are taken from buildspec-build.yaml file in the project.  
 Branch, commit_id and build_source are taken from environment variables  
 Patch version is automatically generated based on previous tags in the branch.  
+  
 ---
 ## About Branch Strategy  
   
