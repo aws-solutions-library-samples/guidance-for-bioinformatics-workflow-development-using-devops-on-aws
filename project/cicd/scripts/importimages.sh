@@ -4,7 +4,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 
-# Deploy Omics Helper
+# Deploy Omics Helper inf not present in account...
 cd $BASEDIR
 git clone https://github.com/aws-samples/amazon-omics-tutorials.git
 HAVEHELPER=$(aws cloudformation list-stacks --output text | grep CREATE_COMPLETE | grep OmxEcrHelper-ContainerBuilder | wc -l)
@@ -30,16 +30,24 @@ fi
 
 # Look for public image references in workflow, generate manifests
 cd $WFDIR
+mkdir -p $WFDIR/conf
 python3 $BASEDIR/amazon-omics-tutorials/utils/scripts/inspect_nf.py \
     -n public_registry_properties.json \
     -s container_substitutions.json \
-    --output-config-file omics.config \
+    --output-config-file conf/omics.config \
     --output-manifest-file container_pull_manifest.json \
     .
 # Use helper to upload images to ECR
 aws stepfunctions start-execution \
     --state-machine-arn arn:aws:states:${AWS_REGION}:${AWS_ACCOUNTID}:stateMachine:omx-container-puller \
     --input file://container_pull_manifest.json
+
+# Include omics.config in workflow config
+HAVECONFIG=$(grep "omics.config" $WFDIR/project/workflow/nextflow-rnaseq/nextflow.config  | wc -l)
+if [[ "${HAVECONFIG}" -gt 0 ]]
+then
+    echo "includeConfig 'conf/omics.config'" >> $WFDIR/nextflow.config
+fi
 
 # Uninstall omics helper?
 #cdk destroy --all --require-approval never
