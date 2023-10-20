@@ -4,34 +4,43 @@ The resources for this project can be deployed using cdk.
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
-## Useful commands
+## Deployment  
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+### Prerequisites  
 
-## cdk bootstrapping
+* An AWS account  
+* AdministratorAccess policy granted to your AWS account (for production, we recommend restricting access as needed)  
+* Both console and programmatic access  
+* NodeJS 16 or 18 installed  
+* AWS CLI installed and configured to use with your AWS account  
+* Typescript 3.8+ installed  
+* AWS CDK CLI installed  
+* Python 3+ installed  
 
-Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).
-These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.
+### Installation  
 
 ```bash
-npm install -g aws-cdk
-npm install -g aws-cdk-lib
-npm i @types/node -D
+npm install && npm run build
+```
+
+** cdk bootstrapping **  
+  
+Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).  
+These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
+  
+```bash
 cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1 aws://ACCOUNT-NUMBER-2/REGION-2 ...
 # alternatively, you can use aws profiles:
 cdk bootstrap --profile prod
 ```
-
-## Project deployment
+  
+** Project deployment ** 
+   
 Given you have aws cli and cdk installed in your machine, and you have a default aws profile configured,  
-the following command will deploy the project resources in your account:
-```
-cdk deploy
+the following command will deploy the project resources in your account:  
+  
+```bash
+npx cdk deploy
 ```
 
 ---
