@@ -17,13 +17,13 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 * AWS CDK CLI installed  
 * Python 3+ installed  
 
-### Installation  
+### Installation  
 
 ```bash
 npm install && npm run build
 ```
 
-** cdk bootstrapping **  
+**cdk bootstrapping**  
   
 Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).  
 These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
@@ -34,7 +34,7 @@ cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1 aws://ACCOUNT-NUMBER-2/REGION-2 ..
 cdk bootstrap --profile prod
 ```
   
-** Project deployment ** 
+**Project deployment** 
    
 Given you have aws cli and cdk installed in your machine, and you have a default aws profile configured,  
 the following command will deploy the project resources in your account:  
