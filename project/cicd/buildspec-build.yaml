@@ -22,7 +22,7 @@ phases:
     commands:
       - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
       - export BASEDIR="${PWD}"
-      - export WFDIR="workflow/nextflow-rnaseq"
+      - export WFDIR="${BASEDIR}/workflow/nextflow-rnaseq"
       - env      
       - chmod +x $BASEDIR/cicd/scripts/*.sh
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
