@@ -55,6 +55,18 @@ export class OmicsPipelinesStack extends Stack {
           ]
       })],
     });
+
+    const cfnStacksPolicy = new iam.PolicyDocument({
+      statements: [new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cloudformation:ListStacks',
+        ],
+        resources: [
+          'arn:aws:cloudformation:*:*:stack/*/*'
+          ]
+      })],
+    });
     
     //   IAM Roles
 
@@ -69,7 +81,8 @@ export class OmicsPipelinesStack extends Stack {
       ],
       inlinePolicies: {
         CdkDeployPolicy: cdkDeployPolicy,
-        StepFunctionCallPolicy: stepFunctCallPolicy
+        StepFunctionCallPolicy: stepFunctCallPolicy,
+        CfnStacksPolicy: cfnStacksPolicy,
       },
     });
 
@@ -114,7 +127,7 @@ export class OmicsPipelinesStack extends Stack {
     //  - 2: Deploy pipeline
 
 
-    //// Build Pipeline (2)
+    //// Build Pipeline (1)
 
     const buildPipeline = new codepipeline.Pipeline(this, 'workflows_build_pipeline', {
       crossAccountKeys: false, // so no AWS KMS CMK is created
@@ -122,7 +135,8 @@ export class OmicsPipelinesStack extends Stack {
     });
 
     const sourceOutput = new codepipeline.Artifact();
-    
+    const buildOutput = new codepipeline.Artifact();
+
     // Build pipeline stages
 
     // Build pipeline source stage
@@ -152,16 +166,15 @@ export class OmicsPipelinesStack extends Stack {
       actionName: 'workflows_build_action',
       project: buildProject,
       input: sourceOutput,
-      outputs: [new codepipeline.Artifact()], // optional
-      executeBatchBuild: false, // optional, defaults to false
-      combineBatchBuildArtifacts: false, // optional, defaults to false
-      //role: role with permission to CLoudWatch Logs, CodeBuild, S3, ADD ECR
-      //arn:aws:iam::095077925459:role/AwsCicdStack-buildprojectRole8A6CB32D-RWLQGLB1AKC7
+      outputs: [buildOutput],
+      executeBatchBuild: false, 
+      combineBatchBuildArtifacts: false,
     });
 
     buildStage.addAction(buildAction);
 
     // Build pipeline test stage
+    // TODO: run workflow (faster in build server, or in healthomics much slower but closer to actual env)
 
     const testStage = buildPipeline.addStage({
       stageName: 'Test',
@@ -171,6 +184,7 @@ export class OmicsPipelinesStack extends Stack {
       actionName: 'workflows_test_action',
       project: testProject,
       input: sourceOutput,
+      extraInputs: [buildOutput],
       outputs: [new codepipeline.Artifact()], // optional
       executeBatchBuild: false, // optional, defaults to false
       combineBatchBuildArtifacts: false, // optional, defaults to false
@@ -179,11 +193,15 @@ export class OmicsPipelinesStack extends Stack {
 
     testStage.addAction(testAction);
 
+    //// Deploy Pipeline for healthomics workflows (2)
+    // TODO: cross-account config:
+
+//    const deployPipeline = new codepipeline.Pipeline(this, 'workflows_deploy_pipeline', {
+//      crossAccountKeys: false, // so no AWS KMS CMK is created
+//      pipelineName: 'Deploy',
+//    });
+
+    // Deploy pipeline approval stage  
+
   }
-
 }
-
-//// Deploy Pipeline for healthomics workflows (3)
-
-
-// Deploy pipeline approval stage

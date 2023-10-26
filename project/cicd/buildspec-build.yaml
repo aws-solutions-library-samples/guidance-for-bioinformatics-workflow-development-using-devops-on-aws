@@ -5,7 +5,6 @@ env:
     workflow_name: RNAseqQC
     workflow_major_version: 1
     workflow_minor_version: 0
-    artifact_bucket: rnaseq-artifacts
     workflow_engine: NEXTFLOW
   shell: bash
   git-credential-helper: yes
@@ -14,36 +13,37 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
-      - echo "OS Environment Setup"
-      - yum install awscli -y
-      - pip3 install boto3
-      - pip install git-remote-codecommit
-  pre_build:
-    commands:
       - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
       - export BASEDIR="${PWD}"
+      - export PATH=$PATH:$BASEDIR 
       - export WFDIR="${BASEDIR}/workflow/nextflow-rnaseq"
-      - env      
       - chmod +x $BASEDIR/cicd/scripts/*.sh
+      - $BASEDIR/cicd/scripts/buildenv_setup.sh
+  pre_build:
+    commands:
+      - env      
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
       - git config --global user.email "CodeBuild@example.com"
       - git config --global user.name "CodeBuild"
+      - cd $WFDIR
+      - echo "Verifying workflow definition is correct..."
+      - $BASEDIR/nextflow -c ./nextflow.config run -preview ./main.nf
   build:
     commands:
-      - bash -x $BASEDIR/cicd/scripts/importimages.sh
+      - bash -x $BASEDIR/cicd/scripts/import_images.sh
       - cd $WFDIR
       - zip -r workflow.zip ./*
       - mv workflow.zip $BASEDIR
       - cd $BASEDIR
       - pwd
       - ls -l
-      - LASTPATCHVER=$($BASEDIR/cicd/scripts/getlastpatch.sh)
-      - NEWPATCHVER=$((LASTPATCHVER+1))
-      - TAGNAME=$($BASEDIR/cicd/scripts/tagcommit.sh ${NEWPATCHVER})
+      - LASTPATCHVER=$($BASEDIR/cicd/scripts/get_last_patch.sh)
+      - TAGNAME=$($BASEDIR/cicd/scripts/get_next_patch.sh ${LASTPATCHVER})
       - echo "Reading image dependencies..."
       - echo "Uploading images to ECR..."
       - echo "Creating Workflow..."
-      - aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEWPATCHVER
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version)
+      - echo "${TMPWFINFO}" > $BASEDIR/workflow.json
   post_build:
     commands:
       - aws omics list-workflows --type PRIVATE --name ${workflow_name}-${workflow_version}
@@ -51,4 +51,5 @@ phases:
 artifacts:
   files:
     - workflow.zip
+    - workflow.json
   name: ${workflow_name}-v${workflow-version}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION

@@ -5,7 +5,6 @@ env:
     workflow_name: RNAseqQC
     workflow_major_version: 1
     workflow_minor_version: 0
-    artifact_bucket: rnaseq-artifacts
     workflow_engine: NEXTFLOW
   shell: bash
   git-credential-helper: yes
@@ -14,21 +13,18 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
-      - echo "OS Environment Setup"
-      - yum install awscli -y
-      - pip3 install boto3
-      - pip install git-remote-codecommit
-  pre_build:
-    commands:
       - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
       - export BASEDIR="${PWD}"
-      - export WFDIR="workflow/nextflow-rnaseq"
-      - env      
+      - export WFDIR="${BASEDIR}/workflow/nextflow-rnaseq"
       - chmod +x $BASEDIR/cicd/scripts/*.sh
-      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - $BASEDIR/cicd/scripts/buildenv_setup.sh
+  pre_build:
+    commands:
       - git config --global user.email "CodeBuild@example.com"
       - git config --global user.name "CodeBuild"
   build:
     commands:
       - echo "TODO --> Launch workflow deployed in previous step"
       - echo " Decide wether to do it locally, or using healthomics (way longer run time)"
+      - ls -lasth $CODEBUILD_SRC_DIR_Artifact_Build_workflows_build_action
+      - cat $CODEBUILD_SRC_DIR_Artifact_Build_workflows_build_action/workflow.json
