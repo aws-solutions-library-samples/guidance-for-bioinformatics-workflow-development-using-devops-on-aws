@@ -19,7 +19,7 @@ aws stepfunctions start-execution \
 
 # Include omics.config in workflow config
 HAVECONFIG=$(grep "omics.config" $WFDIR/nextflow.config  | wc -l)
-if [[ "${HAVECONFIG}" -eq0 ]]
+if [[ "${HAVECONFIG}" -eq 0 ]]
 then
     echo "includeConfig 'conf/omics.config'" >> $WFDIR/nextflow.config
 fi
