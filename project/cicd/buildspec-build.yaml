@@ -2,7 +2,6 @@ version: 0.2
 
 env:
   variables:
-    workflow_name: RNAseqQC
     workflow_major_version: 1
     workflow_minor_version: 0
     workflow_engine: NEXTFLOW
@@ -13,10 +12,9 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
-      - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
       - export BASEDIR="${PWD}"
       - export PATH=$PATH:$BASEDIR 
-      - export WFDIR="${BASEDIR}/workflow/nextflow-rnaseq"
+      - export WFDIR="${BASEDIR}/workflow"
       - chmod +x $BASEDIR/cicd/scripts/*.sh
       - $BASEDIR/cicd/scripts/buildenv_setup.sh
   pre_build:
@@ -37,19 +35,20 @@ phases:
       - cd $BASEDIR
       - pwd
       - ls -l
-      - LASTPATCHVER=$($BASEDIR/cicd/scripts/get_last_patch.sh)
-      - TAGNAME=$($BASEDIR/cicd/scripts/get_next_patch.sh ${LASTPATCHVER})
+      - export LASTPATCHVER=$($BASEDIR/cicd/scripts/get_last_patch.sh)
+      - export TAGNAME=$($BASEDIR/cicd/scripts/get_next_tag_name.sh ${LASTPATCHVER})
+      - export NEXTPATCHVER="${TAGNAME##*.}"
       - echo "Reading image dependencies..."
       - echo "Uploading images to ECR..."
       - echo "Creating Workflow..."
-      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://workflow/nextflow-rnaseq/workflow-parameters.json --name ${workflow_name}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version)
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://${WFDIR}/workflow-parameters-template.json --name ${WFNAME}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEXTPATCHVER)
       - echo "${TMPWFINFO}" > $BASEDIR/workflow.json
   post_build:
     commands:
-      - aws omics list-workflows --type PRIVATE --name ${workflow_name}-${workflow_version}
+      - aws omics list-workflows --type PRIVATE --name ${WFNAME}-${workflow_version}
 
 artifacts:
   files:
     - workflow.zip
     - workflow.json
-  name: ${workflow_name}-v${workflow-version}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION
+  name: ${WFNAME}-v${workflow-version}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION

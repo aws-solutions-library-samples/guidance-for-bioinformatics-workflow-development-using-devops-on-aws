@@ -14,7 +14,7 @@ python3 $BASEDIR/amazon-omics-tutorials/utils/scripts/inspect_nf.py \
     .
 # Use helper to upload images to ECR
 aws stepfunctions start-execution \
-    --state-machine-arn arn:aws:states:${AWS_REGION}:${AWS_ACCOUNTID}:stateMachine:omx-container-puller \
+    --state-machine-arn arn:aws:states:${AWS_REGION}:${ACCOUNT_ID}:stateMachine:omx-container-puller \
     --input file://container_pull_manifest.json
 
 # Include omics.config in workflow config
