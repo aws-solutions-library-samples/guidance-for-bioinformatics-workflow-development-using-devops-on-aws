@@ -15,9 +15,11 @@ phases:
     commands:
       - export AWS_ACCOUNTID=$(echo $CODEBUILD_BUILD_ARN | cut -f5 -d ':')
       - export BASEDIR="${PWD}"
-      - export WFDIR="${BASEDIR}/workflow/nextflow-rnaseq"
+      - export WFDIR="${BASEDIR}/workflow/nextflow-rnaseq"    
       - chmod +x $BASEDIR/cicd/scripts/*.sh
       - $BASEDIR/cicd/scripts/buildenv_setup.sh
+      - export WFID=$(jq -r .id $CODEBUILD_SRC_DIR_Artifact_Build_workflows_build_action/workflow.json)
+      - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflows_build_action/workflow.json)       
   pre_build:
     commands:
       - git config --global user.email "CodeBuild@example.com"
@@ -26,5 +28,5 @@ phases:
     commands:
       - echo "TODO --> Launch workflow deployed in previous step"
       - echo " Decide wether to do it locally, or using healthomics (way longer run time)"
-      - ls -lasth $CODEBUILD_SRC_DIR_Artifact_Build_workflows_build_action
-      - cat $CODEBUILD_SRC_DIR_Artifact_Build_workflows_build_action/workflow.json
+      - echo "Tests failed, delete temporary workflow with ARN ${WFARN}"
+      - aws omics delete-workflow --id $WFID
