@@ -25,7 +25,8 @@ phases:
       - git config --global user.name "CodeBuild"
       - cd $WFDIR
       - echo "Verifying workflow definition is correct..."
-      - $BASEDIR/nextflow -c ./nextflow.config run -preview ./main.nf
+      - $BASEDIR/nextflow -c ./nextflow.config run -preview ./main.nf -params-file ./test.parameters.json
+      - cat .nextflow.log
   build:
     commands:
       - bash -x $BASEDIR/cicd/scripts/import_images.sh
@@ -41,7 +42,7 @@ phases:
       - echo "Reading image dependencies..."
       - echo "Uploading images to ECR..."
       - echo "Creating Workflow..."
-      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://${WFDIR}/workflow-parameters-template.json --name ${WFNAME}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEXTPATCHVER)
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://${WFDIR}/parameter-template.json --name ${WFNAME}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEXTPATCHVER)
       - echo "${TMPWFINFO}" > $BASEDIR/workflow.json
   post_build:
     commands:

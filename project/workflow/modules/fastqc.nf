@@ -2,7 +2,7 @@ params.outdir = 'results'
 
 process FASTQC {
     tag "FASTQC on $sample_id"
-    container '523155489867.dkr.ecr.us-west-2.amazonaws.com/rnaseq-nf:1.1.1'
+    container 'quay.io/nextflow/rnaseq-nf:v1.1'
     publishDir params.outdir, mode:'copy'
 
     input:

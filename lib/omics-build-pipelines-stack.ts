@@ -5,18 +5,11 @@ import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codecommit from 'aws-cdk-lib/aws-codecommit';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
 
-export interface Config extends StackProps {
-  readonly params: {
-    readonly environment: string;
-  };
-}
-
-export class OmicsPipelinesStack extends Stack {
-  
+export class OmicsBuildPipelinesStack extends Stack {
+  public readonly workflowsCodeRepo: codecommit.Repository;
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
@@ -29,21 +22,7 @@ export class OmicsPipelinesStack extends Stack {
       maxLength: 20,
     })
     console.log('workflowName ---> ', workflowName.valueAsString);
-
-    // Git repositories
-
-    const workflowsCodeRepo = new codecommit.Repository(this, 'workflows_code_git', {
-      repositoryName: 'healthomics-'.concat(workflowName.valueAsString,'-workflow'),
-      code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), 'main'),
-    })
-
-    //// ECR Repository
-
-    //const ecrRepo = new ecr.Repository(this, 'healthomics_ecr', {
-    //  repositoryName: 'healthomics-repo',
-    //  removalPolicy: RemovalPolicy.DESTROY, //change if you want to retain the repo
-    //});
-    
+   
     // IAM Resources
     //   IAM Custom Policies
     const cdkDeployPolicy = new iam.PolicyDocument({
@@ -86,7 +65,6 @@ export class OmicsPipelinesStack extends Stack {
     });
     
     ////   IAM Roles
-
     const codeBuildRole = new iam.Role(this, 'codeBuildRole', {
       roleName: 'codeBuildRole-'.concat(workflowName.valueAsString),
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
@@ -111,8 +89,15 @@ export class OmicsPipelinesStack extends Stack {
       managedPolicies: [       
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("CloudWatchLogsFullAccess"),
-      ]
+      ],
     });    
+
+    //// Git repositories
+
+    this.workflowsCodeRepo = new codecommit.Repository(this, 'workflows_code_git', {
+      repositoryName: 'healthomics-'.concat(workflowName.valueAsString,'-workflow'),
+      code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), 'main'),
+    })
 
     //// S3 Bucket for testing files, etc.
     const testFilesBucket = new s3.Bucket(this, 'testFilesBucket', {
@@ -125,6 +110,7 @@ export class OmicsPipelinesStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
     testFilesBucket.grantReadWrite(omicsTesterRole);
+    testFilesBucket.grantReadWrite(codeBuildRole);
 
     //// CodeBuild projects
 
@@ -197,7 +183,7 @@ export class OmicsPipelinesStack extends Stack {
 
     const sourceAction = new codepipeline_actions.CodeCommitSourceAction({
       actionName: 'CodeCommit',
-      repository: workflowsCodeRepo,
+      repository: this.workflowsCodeRepo,
       output: sourceOutput,
       branch: 'main',
       codeBuildCloneOutput: true, // clone full git repo to handle tags
@@ -243,16 +229,16 @@ export class OmicsPipelinesStack extends Stack {
 
     testStage.addAction(testAction);
 
-    //// Deploy Pipeline for healthomics workflows (2)
-    // Consider moving to pipeline Type V2 when supported by CNF/CDK    
-    // TODO: cross-account config:
+    // Build pipeline approval stage
 
-//    const deployPipeline = new codepipeline.Pipeline(this, 'workflows_deploy_pipeline', {
-//      crossAccountKeys: false, // so no AWS KMS CMK is created
-//      pipelineName: 'Deploy',
-//    });
+    const approveStage = buildPipeline.addStage({ stageName: 'Approve' });
 
-    // Deploy pipeline approval stage  
+    const manualApprovalAction = new codepipeline_actions.ManualApprovalAction({
+      actionName: 'Approve',
+      additionalInformation: 'Approve this version to be deployed in production.',
+    });
+
+    approveStage.addAction(manualApprovalAction);
 
   }
 }

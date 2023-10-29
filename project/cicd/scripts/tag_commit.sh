@@ -3,6 +3,8 @@
 # patch version from arguments
 NEWPATCHVER=$1
 
+echo "Tagging commit with ${NEWPATCHVER}"
+
 # Get script directory
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
