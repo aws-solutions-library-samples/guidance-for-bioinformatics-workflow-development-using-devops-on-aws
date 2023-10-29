@@ -8,7 +8,7 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
 ### Prerequisites  
 
-* An AWS account  
+* Two (or more) AWS accounts  
 * AdministratorAccess policy granted to your AWS account (for production, we recommend restricting access as needed)  
 * Both console and programmatic access  
 * NodeJS 16 or 18 installed  
@@ -32,7 +32,7 @@ Choose two (or more) aws accounts to deploy the resources:
 | xxxxxxxxxxxx | deployment account 1 | prod |  |  |
 | xxxxxxxxxxxx | deployment account 2 (optional) | preprod |  |  |  
   
-By default, this project works with only one (production) deployment account, but it can be easily extended to work with additional accounts.  
+By default, this project works with CI/CD and one (production) deployment account, but it can be easily extended to work with additional accounts.  
 Once you have chosen the accounts and have its account numbers, it's time to bootstrap them.  
 Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).  
 These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
