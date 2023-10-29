@@ -42,7 +42,6 @@ done
 if [[ "${RUNSTATUS}" = "COMPLETED" ]]
 then
     echo "Workflow completed successfully."
-    tag_commit.sh $NEWPATCHVER
     exit 0
 else
     echo "Workflow failed to complete."

@@ -1,28 +1,40 @@
-import { CfnParameter,Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
+import { CfnParameter, Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codecommit from 'aws-cdk-lib/aws-codecommit';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as path from 'path';
+
+
+// extend the props of the stack by adding some params
+export interface OmicsBuildPipelinesStackProps extends StackProps {
+  workflowName: string;
+}
 
 export class OmicsBuildPipelinesStack extends Stack {
   public readonly workflowsCodeRepo: codecommit.Repository;
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  private workflowName: string;
+
+  constructor(scope: Construct, id: string, props: OmicsBuildPipelinesStackProps) {
     super(scope, id, props);
 
-    // Parameters
-    const workflowName = new CfnParameter(this, 'workflowName', {
-      description: 'Name of the workflow',
-      type: 'String',
-      allowedPattern: '^[a-zA-Z0-9-]*$',
-      minLength: 4,
-      maxLength: 20,
-    })
-    console.log('workflowName ---> ', workflowName.valueAsString);
-   
+    //// Parameters
+    //const workflowName = new CfnParameter(this, 'workflowName', {
+    //  description: 'Name of the workflow',
+    //  type: 'String',
+    //  allowedPattern: '^[a-zA-Z0-9-]*$',
+    //  minLength: 4,
+    //  maxLength: 20,
+    //})
+
+    const workflowName = props.workflowName;
+    console.log('workflowName ---> ', workflowName);
+
     // IAM Resources
     //   IAM Custom Policies
     const cdkDeployPolicy = new iam.PolicyDocument({
@@ -36,7 +48,7 @@ export class OmicsBuildPipelinesStack extends Stack {
           'arn:aws:iam::*:role/cdk-readOnlyRole',
           'arn:aws:iam::*:role/cdk-hnb659fds-deploy-role-*',
           'arn:aws:iam::*:role/cdk-hnb659fds-file-publishing-*'
-          ]
+        ]
       })],
     });
 
@@ -48,7 +60,7 @@ export class OmicsBuildPipelinesStack extends Stack {
         ],
         resources: [
           'arn:aws:states:*:*:stateMachine:omx-container-puller'
-          ]
+        ]
       })],
     });
 
@@ -60,13 +72,13 @@ export class OmicsBuildPipelinesStack extends Stack {
         ],
         resources: [
           'arn:aws:cloudformation:*:*:stack/*/*'
-          ]
+        ]
       })],
     });
-    
+
     ////   IAM Roles
     const codeBuildRole = new iam.Role(this, 'codeBuildRole', {
-      roleName: 'codeBuildRole-'.concat(workflowName.valueAsString),
+      roleName: 'codeBuildRole-'.concat(workflowName),
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
       description: 'CodeBuild standard Role',
       managedPolicies: [
@@ -83,25 +95,32 @@ export class OmicsBuildPipelinesStack extends Stack {
     });
 
     const omicsTesterRole = new iam.Role(this, 'omicsTesterRole', {
-      roleName: 'omicsTesterRole-'.concat(workflowName.valueAsString),
+      roleName: 'omicsTesterRole-'.concat(workflowName),
       assumedBy: new iam.ServicePrincipal('omics.amazonaws.com'),
       description: 'HealthOmics CI/CD Testing Role',
-      managedPolicies: [       
+      managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("CloudWatchLogsFullAccess"),
       ],
-    });    
+    });
+
+    //// KMS Key (required to share artifacts accross accounts)
+    // const artifactKey = new kms.Key(this,"PipelineKey")
 
     //// Git repositories
 
     this.workflowsCodeRepo = new codecommit.Repository(this, 'workflows_code_git', {
-      repositoryName: 'healthomics-'.concat(workflowName.valueAsString,'-workflow'),
+      repositoryName: 'healthomics-'.concat(workflowName, '-workflow'),
+      //repositoryName: 'healthomics-workflow',
       code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), 'main'),
+      description: 'HealthOmics Workflows Git Repository for '.concat(workflowName, ' workflow.'),
     })
 
-    //// S3 Bucket for testing files, etc.
+    //// S3 Buckets
+
+    // Bucket for testing files, etc.
     const testFilesBucket = new s3.Bucket(this, 'testFilesBucket', {
-      bucketName: 'test-files-'.concat(workflowName.valueAsString,'-',this.account),
+      bucketName: 'test-files-'.concat(workflowName, '-', this.account),
       removalPolicy: RemovalPolicy.DESTROY, //change if you want to retain the bucket
       encryption: s3.BucketEncryption.S3_MANAGED, // change if you want to use KMS keys for encryption
       enforceSSL: true,
@@ -112,17 +131,31 @@ export class OmicsBuildPipelinesStack extends Stack {
     testFilesBucket.grantReadWrite(omicsTesterRole);
     testFilesBucket.grantReadWrite(codeBuildRole);
 
+    // Bucket for artifacts
+    const artifactBucket = new s3.Bucket(this, 'artifactsBucket', {
+      bucketName: 'artifacts-'.concat(workflowName, '-', this.account),
+      removalPolicy: RemovalPolicy.RETAIN, //change if you want to destroy the bucket
+      encryption: s3.BucketEncryption.S3_MANAGED, // change if you want to use KMS keys for encryption
+      //encryptionKey: artifactKey, // change if you want to use other KMS keys for encryption     
+      enforceSSL: true,
+      versioned: false,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    });
+    testFilesBucket.grantRead(omicsTesterRole);
+    testFilesBucket.grantReadWrite(codeBuildRole);
+
     //// CodeBuild projects
 
     const buildProject = new codebuild.PipelineProject(this, 'build_project', {
-      projectName: 'build_project-'.concat(workflowName.valueAsString),
+      projectName: 'build_project-'.concat(workflowName),
       buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-build.yaml'),
       role: codeBuildRole,
       environmentVariables: {
-        WFNAME: {value: workflowName.valueAsString},
-        ACCOUNT_ID: {value: this.account},
-        TESTS_BUCKET_NAME: {value: testFilesBucket.bucketName},
-        OMICS_TESTER_ROLE_ARN: {value: omicsTesterRole.roleArn}
+        WFNAME: { value: workflowName },
+        ACCOUNT_ID: { value: this.account },
+        TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
+        OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
       },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
@@ -131,43 +164,44 @@ export class OmicsBuildPipelinesStack extends Stack {
     });
 
     const testProject = new codebuild.PipelineProject(this, 'test_project', {
-      projectName: 'test_project-'.concat(workflowName.valueAsString),
+      projectName: 'test_project-'.concat(workflowName),
       buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-test.yaml'),
       role: codeBuildRole,
       environmentVariables: {
-        WFNAME: {value: workflowName.valueAsString},
-        ACCOUNT_ID: {value: this.account},
-        TESTS_BUCKET_NAME: {value: testFilesBucket.bucketName},
-        OMICS_TESTER_ROLE_ARN: {value: omicsTesterRole.roleArn}
-      },      
+        WFNAME: { value: workflowName },
+        ACCOUNT_ID: { value: this.account },
+        TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
+        OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
+      },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
-        privileged: true, // needed to connect to the Docker daemon for building the image
+        privileged: false,
       },
     });
 
-    const uploadProject = new codebuild.PipelineProject(this, 'upload_project', {
-      projectName: 'upload_project-'.concat(workflowName.valueAsString),
-      buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-upload.yaml'),
+    const releaseProject = new codebuild.PipelineProject(this, 'release_project', {
+      projectName: 'release_project-'.concat(workflowName),
+      buildSpec: codebuild.BuildSpec.fromSourceFilename('cicd/buildspec-release.yaml'),
       role: codeBuildRole,
       environmentVariables: {
-        WFNAME: {value: workflowName.valueAsString},
-        ACCOUNT_ID: {value: this.account},
-        TESTS_BUCKET_NAME: {value: testFilesBucket.bucketName},
-        OMICS_TESTER_ROLE_ARN: {value: omicsTesterRole.roleArn}
-      },      
+        WFNAME: { value: workflowName },
+        ACCOUNT_ID: { value: this.account },
+        TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
+        OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
+      },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
-        privileged: true, // needed to connect to the Docker daemon for building the image
+        privileged: false,
       },
     });
 
-    //// Build Pipeline (1)
+    //// Build Pipeline
     // Consider moving to pipeline Type V2 when supported by CNF/CDK
 
     const buildPipeline = new codepipeline.Pipeline(this, 'workflows_build_pipeline', {
-      crossAccountKeys: false, // so no AWS KMS CMK is created
-      pipelineName: 'Build-'.concat(workflowName.valueAsString),
+      artifactBucket: artifactBucket,
+      crossAccountKeys: true, // required to share artifacts accross accounts
+      pipelineName: 'Build-'.concat(workflowName),
     });
 
     const sourceOutput = new codepipeline.Artifact();
@@ -191,7 +225,7 @@ export class OmicsBuildPipelinesStack extends Stack {
     });
 
     sourceStage.addAction(sourceAction);
-    
+
     // Build pipeline build stage
 
     const buildStage = buildPipeline.addStage({
@@ -203,7 +237,7 @@ export class OmicsBuildPipelinesStack extends Stack {
       project: buildProject,
       input: sourceOutput,
       outputs: [buildOutput],
-      executeBatchBuild: false, 
+      executeBatchBuild: false,
       combineBatchBuildArtifacts: false,
     });
 
@@ -236,9 +270,30 @@ export class OmicsBuildPipelinesStack extends Stack {
     const manualApprovalAction = new codepipeline_actions.ManualApprovalAction({
       actionName: 'Approve',
       additionalInformation: 'Approve this version to be deployed in production.',
+      notificationTopic: new sns.Topic(this, 'Topic'), // optional
+      notifyEmails: [
+        'some_email@example.com',
+      ], // configure your email here
     });
 
     approveStage.addAction(manualApprovalAction);
+
+    const releaseStage = buildPipeline.addStage({
+      stageName: 'Release',
+    });
+
+    const tagAction = new codepipeline_actions.CodeBuildAction({
+      actionName: 'workflow_tag_action',
+      project: releaseProject,
+      input: sourceOutput,
+      extraInputs: [buildOutput],
+      outputs: [new codepipeline.Artifact()],
+      executeBatchBuild: false, // optional, defaults to false
+      combineBatchBuildArtifacts: false, // optional, defaults to false
+      //role: role with permission to CLoudWatch Logs, CodeBuild, S3, ADD ECR
+    });
+
+    releaseStage.addAction(tagAction);
 
   }
 }

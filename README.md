@@ -46,10 +46,13 @@ cdk bootstrap --profile prod
 ```
   
 Now it's time to configure the accounts in our cdk environments.  
-Edit [bin/cdk.ts](bin/cdk.ts) file in this project, and configure the aws account numbers and region for each environment.  
+Edit [bin/cdk.ts](bin/cdk.ts) file locally, and configure the aws account numbers and region for each environment.  
+  
+You can also edit file [lib/omics-build-pipelines-stack.ts](lib/omics-build-pipelines-stack.ts) and replace some_email@example.com with an email
+you want the approval notifications sent to.  
   
 > [!WARNING]  
-> Always remove the account numbers from [bin/cdk.ts](bin/cdk.ts) before sharing it.  
+> Always remove the account numbers and emails those edited files before sharing them.  
   
 **Project deployment** 
    
@@ -77,7 +80,7 @@ Here is an example of the trust relationship policy in the deployment account:
   
 Given you have aws cli and cdk installed in your machine, define your default aws profile to use CI/CD account, or specify it using --profile option.  
 The following command will deploy the project resources in your accounts:  
-Define the name of the workflow according to your pipeline; it will be including in the deployed resources.  
+Define the name of the workflow according to your pipeline; it will be included in the deployed resources.  
   
 ```bash
 npx cdk deploy --parameters workflowName=nextflow-rnaseq --all
@@ -133,3 +136,30 @@ This limits the ways teams can take advantage of automation when working on diff
   
 A solition for this could be but combine it later with tests launched from the developers workstations when working on development branches.  
 These tests would emulate what the build pipeline does, using IaC and probably CDK, but on the developer’s accounts, and launched from the developer’s workstation.  
+  
+Deployment to production account is triggered when a new commit is sent to the main branch, and it has a git tag following a pattern (TBD).  
+This is [supported](https://aws.amazon.com/about-aws/whats-new/2023/10/aws-codepipeline-triggering-git-tags/) by codepipelines V2, but CDK currently only supports pipelines V1.  
+So we implemented triggers for every commit and conditions for tags.  
+
+
+### Issues:
+**Problem** 
+Can't use parameters, because cdk creates an additional stack, which doesn't accept it  
+```
+EventBusPolicy-<account1>-us-east-1-<account2> (OmicsDeployPipelinesStack-EventBusPolicy-support-us-east-1-<account1>) failed: Error [ValidationError]: Parameters: [workflowName] do not exist in the template
+```
+**Solution**  
+Edit [bin/cdk.ts](bin/cdk.ts) file locally and add it  
+
+**Problem**  
+Cross-account events for codecommit tigger on deployment account fail to deploy:  
+4:03:43 PM | CREATE_FAILED        | AWS::Events::Rule           | workflowscodegitOm...nEventRuleB653F5F6
+Resource handler returned message: "RoleArn is required for target arn:aws:events:us-east-1:xxxxxxxxxxxx:event-bus/default. (Service: EventBridge, Status Code: 400, Request ID: 609c5786-5479-4e98-b6fa-7ab3267ddfb1)" (RequestToken: b3e801da-75b3-91dd-0b63-568fc5427130, HandlerErrorCode: GeneralService
+Exception)
+
+
+ ❌  OmicsBuildPipelinesStack failed: Error: The stack named OmicsBuildPipelinesStack failed to deploy: UPDATE_ROLLBACK_COMPLETE: Resource handler returned message: "RoleArn is required for target arn:aws:events:us-east-1:xxxxxxxxxxxx:event-bus/default. (Service: EventBridge, Status Code: 400, Request ID: 609c5786-5479-4e98-b6fa-7ab3267ddfb1)" (RequestToken: b3e801da-75b3-91dd-0b63-568fc5427130, HandlerErrorCode: GeneralServiceException)
+
+**Solution**  
+Try using CDK pipelines  
+

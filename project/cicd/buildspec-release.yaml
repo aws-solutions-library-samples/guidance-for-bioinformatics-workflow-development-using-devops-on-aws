@@ -11,16 +11,17 @@ phases:
       - export BASEDIR="${PWD}"
       - export WFDIR="${BASEDIR}/workflow"    
       - chmod +x $BASEDIR/cicd/scripts/*.sh
+  pre_build:
+    commands:
+      - cat $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json
       - export WFID=$(jq -r .id $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export workflow_major_version=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export workflow_minor_version=$(jq -r .tags.MINOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export NEXTPATCHVER=$(jq -r .tags.PATCH_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
-  pre_build:
-    commands:
       - git config --global user.email "CodeBuild@example.com"
       - git config --global user.name "CodeBuild"
   build:
     commands:
-      - echo "Launch workflow deployed in previous step"
-      - bash -x $BASEDIR/cicd/scripts/test_workflow.sh
+      - echo "Tagging commit to make it available for production env."
+      - $BASEDIR/cicd/scripts/tag_commit.sh $NEXTPATCHVER

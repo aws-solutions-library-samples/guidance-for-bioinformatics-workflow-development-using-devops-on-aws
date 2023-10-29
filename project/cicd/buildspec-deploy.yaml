@@ -1,0 +1,46 @@
+version: 0.2
+
+env:
+  shell: bash
+  git-credential-helper: yes
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - export BASEDIR="${PWD}"
+      - export PATH=$PATH:$BASEDIR 
+      - export WFDIR="${BASEDIR}/workflow"
+      - chmod +x $BASEDIR/cicd/scripts/*.sh
+      - $BASEDIR/cicd/scripts/buildenv_setup.sh
+  pre_build:
+    commands:
+      - env      
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
+  build:
+    commands:
+      - bash -x $BASEDIR/cicd/scripts/import_images.sh
+      - cd $WFDIR
+      - zip -r workflow.zip ./*
+      - mv workflow.zip $BASEDIR
+      - cd $BASEDIR
+      - pwd
+      - ls -l
+      - export LASTPATCHVER=$($BASEDIR/cicd/scripts/get_last_patch.sh)
+      - export TAGNAME=$($BASEDIR/cicd/scripts/get_next_tag_name.sh ${LASTPATCHVER})
+      - export NEXTPATCHVER="${TAGNAME##*.}"
+      - echo "Reading image dependencies..."
+      - echo "Creating Workflow..."
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://${WFDIR}/parameter-template.json --name ${WFNAME}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEXTPATCHVER)
+      - echo "${TMPWFINFO}" > $BASEDIR/workflow.json
+  post_build:
+    commands:
+      - aws omics list-workflows --type PRIVATE --name ${WFNAME}-${workflow_version}
+
+artifacts:
+  files:
+    - workflow.zip
+    - workflow.json
+  name: ${WFNAME}-v${workflow-version}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION
