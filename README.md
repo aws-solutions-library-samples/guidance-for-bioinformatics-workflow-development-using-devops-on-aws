@@ -25,22 +25,62 @@ npm install && npm run build
 
 **cdk bootstrapping**  
   
+Choose two (or more) aws accounts to deploy the resources:  
+| aws account# | purpose | alias |  |  |
+|---|---|---|---|---|
+| xxxxxxxxxxxx | CI/CD tooling | CI/CD |  |  |
+| xxxxxxxxxxxx | deployment account 1 | prod |  |  |
+| xxxxxxxxxxxx | deployment account 2 (optional) | preprod |  |  |  
+  
+By default, this project works with only one (production) deployment account, but it can be easily extended to work with additional accounts.  
+Once you have chosen the accounts and have its account numbers, it's time to bootstrap them.  
 Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).  
 These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
-  
+Follow this procedure:  
+
 ```bash
 cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1 aws://ACCOUNT-NUMBER-2/REGION-2 ...
 # alternatively, you can use aws profiles:
-cdk bootstrap --profile prod
+cdk bootstrap --profile cicd  
+cdk bootstrap --profile prod  
 ```
+  
+Now it's time to configure the accounts in our cdk environments.  
+Edit [bin/cdk.ts](bin/cdk.ts) file in this project, and configure the aws account numbers and region for each environment.  
+  
+> [!WARNING]  
+> Always remove the account numbers from [bin/cdk.ts](bin/cdk.ts) before sharing it.  
   
 **Project deployment** 
    
-Given you have aws cli and cdk installed in your machine, and you have a default aws profile configured,  
-the following command will deploy the project resources in your account:  
+Configure trust relationship on the cdk roles in deployment account(s)  
+Trust an IAM user or Role from the CI/CD account depending on how have you logged-in.  
+Here is an example of the trust relationship policy in the deployment account:  
+  
+```json
+{
+    "Version": "2008-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::<CI/CD Account_id>:user/<IAM User name>",
+                    "arn:aws:iam::<Deployment Account_id>:root"
+                ]
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+```  
+  
+Given you have aws cli and cdk installed in your machine, define your default aws profile to use CI/CD account, or specify it using --profile option.  
+The following command will deploy the project resources in your accounts:  
+Define the name of the workflow according to your pipeline; it will be including in the deployed resources.  
   
 ```bash
-npx cdk deploy
+npx cdk deploy --parameters workflowName=nextflow-rnaseq --all
 ```
 
 ---
