@@ -49,7 +49,7 @@ npx cdk bootstrap --profile pro --trust <CICD ACCOUNT_ID> aws://<PRO ACCOUNT_ID>
 ```
   
 Now it's time to configure the accounts in our cdk environments.  
-Edit [bin/cdk.ts](bin/cdk.ts) file locally, and configure the aws account numbers and region for each environment.  
+Edit [bin/omics-cicd.ts](bin/omics-cicd.ts) file locally, and configure the aws account numbers and region for each environment.  
 In this example, there are 2 accounts (deployment stages) in the list.  
 You can add more accounts for testing or other purposes to the pipeline by just including them in deployEnvironments property.  
 Just remember to bootstrap those accounts as well.  
@@ -70,6 +70,15 @@ As part of the deployment, you will see an AWS CodeCommit repository.
 Another component deployed by CDK is a build/deploy pipeline, that will be triggered by pushes on the CoodeCommit repository.  
 Push the contents of this project (excluding node_modules and cdk.out folders) to this repository, and you're ready to start generating new versions of yoyr workflows and deploying them accross different stages and accounts in tour pipeline.
 
+**Workflow Setup**  
+  
+This project currently supports only nextflow pipelines.  
+It comes with a preconfigured workflow definition, under [project/workflow](project/workflow) folder.  
+The contents of this folder will be uploaded to the codecommit repository created by cdk, and used as source for the Amazon Healthomics custom workflow deployment.  
+Replace this folder contents with your own nextflow project, paying special attention to the next files:  
+* [project/workflow/nextflow.config](project/workflow/nextflow.config): Update your pipeline version and name so we can follow semantic versioning (see below).  
+* [project/workflow/test.parameters.json](test.parameters.json): Update with the bucket and testing file location for the dynamic tests.  
+* [project/workflow/parameter-template.json](project/workflow/parameter-template.json): Update with the template for the parameters your workflow is taking.  
 
 ---
 ## Versioning  
