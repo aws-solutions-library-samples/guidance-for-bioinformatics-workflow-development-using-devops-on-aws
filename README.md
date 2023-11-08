@@ -29,62 +29,47 @@ Choose two (or more) aws accounts to deploy the resources:
 | aws account# | purpose | alias |  |  |
 |---|---|---|---|---|
 | xxxxxxxxxxxx | CI/CD tooling | CI/CD |  |  |
-| xxxxxxxxxxxx | deployment account 1 | prod |  |  |
-| xxxxxxxxxxxx | deployment account 2 (optional) | preprod |  |  |  
+| xxxxxxxxxxxx | deployment account 1 | PROD |  |  |
   
 By default, this project works with CI/CD and one (production) deployment account, but it can be easily extended to work with additional accounts.  
 Once you have chosen the accounts and have its account numbers, it's time to bootstrap them.  
 Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).  
 These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
+The bootstrap process for this cross-account setup will be more complex than in a single-account case, because we must define the trust relationships between accounts.  
+First, make sure you have defined in your workstation profiles for all the accounts.  
+As an example, we can name the aws profiles for the accounts `cicd`, `dev` and `pro`.
 Follow this procedure:  
 
 ```bash
 cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1 aws://ACCOUNT-NUMBER-2/REGION-2 ...
 # alternatively, you can use aws profiles:
-cdk bootstrap --profile cicd  
-cdk bootstrap --profile prod  
+cdk bootstrap --profile cicd   --template ./lib/bootstrap-template.yml
+
+npx cdk bootstrap --profile pro --trust <CICD ACCOUNT_ID> aws://<PRO ACCOUNT_ID>/us-east-1 --template ./lib/bootstrap-template.yml
 ```
   
 Now it's time to configure the accounts in our cdk environments.  
 Edit [bin/cdk.ts](bin/cdk.ts) file locally, and configure the aws account numbers and region for each environment.  
-  
-You can also edit file [lib/omics-build-pipelines-stack.ts](lib/omics-build-pipelines-stack.ts) and replace some_email@example.com with an email
-you want the approval notifications sent to.  
-  
+In this example, there are 2 accounts (deployment stages) in the list.  
+You can add more accounts for testing or other purposes to the pipeline by just including them in deployEnvironments property.  
+Just remember to bootstrap those accounts as well.  
+    
 > [!WARNING]  
-> Always remove the account numbers and emails those edited files before sharing them.  
+> Always remove the account numbers and emails those edited files before sharing them (pushing to a public repo).  
   
 **Project deployment** 
-   
-Configure trust relationship on the cdk roles in deployment account(s)  
-Trust an IAM user or Role from the CI/CD account depending on how have you logged-in.  
-Here is an example of the trust relationship policy in the deployment account:  
-  
-```json
-{
-    "Version": "2008-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": [
-                    "arn:aws:iam::<CI/CD Account_id>:user/<IAM User name>",
-                    "arn:aws:iam::<Deployment Account_id>:root"
-                ]
-            },
-            "Action": "sts:AssumeRole"
-        }
-    ]
-}
-```  
-  
+
 Given you have aws cli and cdk installed in your machine, define your default aws profile to use CI/CD account, or specify it using --profile option.  
-The following command will deploy the project resources in your accounts:  
-Define the name of the workflow according to your pipeline; it will be included in the deployed resources.  
+The following command will deploy the project resources in your CI/CD account:  
   
 ```bash
-npx cdk deploy --parameters workflowName=nextflow-rnaseq --all
+npx cdk deploy --profile cicd
 ```
+
+As part of the deployment, you will see an AWS CodeCommit repository.  
+Another component deployed by CDK is a build/deploy pipeline, that will be triggered by pushes on the CoodeCommit repository.  
+Push the contents of this project (excluding node_modules and cdk.out folders) to this repository, and you're ready to start generating new versions of yoyr workflows and deploying them accross different stages and accounts in tour pipeline.
+
 
 ---
 ## Versioning  
