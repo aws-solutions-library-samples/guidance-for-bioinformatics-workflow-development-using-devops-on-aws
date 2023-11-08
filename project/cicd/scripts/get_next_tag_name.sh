@@ -10,9 +10,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Get current branch name
 CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-if [ ! -z ${NEWPATCHVER}  ] && [ ! -z ${workflow_major_version} ] && [ ! -z ${workflow_minor_version} ] && [ ! -z ${CODEBUILD_RESOLVED_SOURCE_VERSION} ]
+if [ ! -z ${NEWPATCHVER}  ] && [ ! -z ${MAJORV} ] && [ ! -z ${MINORV} ] && [ ! -z ${CODEBUILD_RESOLVED_SOURCE_VERSION} ]
 then
-      TAGNAME="${CURRBRANCH}-${workflow_major_version}.${workflow_minor_version}.${NEWPATCHVER}"
+      TAGNAME="${CURRBRANCH}-${MAJORV}.${MINORV}.${NEWPATCHVER}"
       echo "${TAGNAME}"
 else
       exit 1

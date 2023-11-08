@@ -2,8 +2,6 @@ version: 0.2
 
 env:
   variables:
-    workflow_major_version: 1
-    workflow_minor_version: 0
     workflow_engine: NEXTFLOW
   shell: bash
   git-credential-helper: yes
@@ -12,15 +10,18 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
-      - export BASEDIR="${PWD}"
+      - export BASEDIR="${CODEBUILD_SRC_DIR}"
       - export PATH=$PATH:$BASEDIR 
       - export WFDIR="${BASEDIR}/workflow"
       - chmod +x $BASEDIR/cicd/scripts/*.sh
       - $BASEDIR/cicd/scripts/buildenv_setup.sh
   pre_build:
     commands:
-      - env      
+      - MANIFESTVER=$(grep "version = " $WFDIR/nextflow.config | cut -d\' -f2)
+      - MAJORV=$(echo ${MANIFESTVER} | cut -d. -f1)
+      - MINORV=$(echo ${MANIFESTVER} | cut -d. -f2)
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - export CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
       - git config --global user.email "CodeBuild@example.com"
       - git config --global user.name "CodeBuild"
       - cd $WFDIR
@@ -29,27 +30,30 @@ phases:
       - cat .nextflow.log
   build:
     commands:
-      - bash -x $BASEDIR/cicd/scripts/import_images.sh
-      - cd $WFDIR
-      - zip -r workflow.zip ./*
-      - mv workflow.zip $BASEDIR
-      - cd $BASEDIR
-      - pwd
-      - ls -l
+      - bash -x ${BASEDIR}/cicd/scripts/import_images.sh
       - export LASTPATCHVER=$($BASEDIR/cicd/scripts/get_last_patch.sh)
       - export TAGNAME=$($BASEDIR/cicd/scripts/get_next_tag_name.sh ${LASTPATCHVER})
       - export NEXTPATCHVER="${TAGNAME##*.}"
-      - echo "Reading image dependencies..."
-      - echo "Uploading images to ECR..."
+      - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
+      - export ARTIFACTFILE="workflow"
+      - cd ${WFDIR}
+      - zip -r ${BASEDIR}/${ARTIFACTFILE}.zip ./*
+      - cd $BASEDIR
       - echo "Creating Workflow..."
-      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://workflow.zip --parameter-template file://${WFDIR}/parameter-template.json --name ${WFNAME}-$TAGNAME --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,MAJOR_VERSION=$workflow_major_version,MINOR_VERSION=$workflow_minor_version,PATCH_VERSION=$NEXTPATCHVER)
-      - echo "${TMPWFINFO}" > $BASEDIR/workflow.json
+      - ls -l ${WFDIR}
+      - find $BASEDIR -name "parameter-template.json"
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://${BASEDIR}/${ARTIFACTFILE}.zip --parameter-template file://${WFDIR}/parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$NEXTPATCHVER)
+      - echo "${TMPWFINFO}" > $BASEDIR/${ARTIFACTFILE}.json
+      - cp $WFDIR/parameter-template.json $BASEDIR
+      - cp $WFDIR/container_pull_manifest.json $BASEDIR
   post_build:
     commands:
-      - aws omics list-workflows --type PRIVATE --name ${WFNAME}-${workflow_version}
+      - aws omics list-workflows --type PRIVATE --name ${ARTIFACTNAME}
 
 artifacts:
   files:
-    - workflow.zip
-    - workflow.json
-  name: ${WFNAME}-v${workflow-version}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION
+    - ${ARTIFACTFILE}.zip
+    - ${ARTIFACTFILE}.json
+    - parameter-template.json
+    - container_pull_manifest.json
+  name: ${ARTIFACTNAME}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION
