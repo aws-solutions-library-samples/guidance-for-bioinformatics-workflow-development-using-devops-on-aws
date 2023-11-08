@@ -77,8 +77,9 @@ It comes with a preconfigured workflow definition, under [project/workflow](proj
 The contents of this folder will be uploaded to the codecommit repository created by cdk, and used as source for the Amazon Healthomics custom workflow deployment.  
 Replace this folder contents with your own nextflow project, paying special attention to the next files:  
 * [project/workflow/nextflow.config](project/workflow/nextflow.config): Update your pipeline version and name so we can follow semantic versioning (see below).  
-* [project/workflow/test.parameters.json](test.parameters.json): Update with the bucket and testing file location for the dynamic tests.  
+* [ project/workflow/test.parameters.json ](project/workflow/test.parameters.json): Update with the bucket and testing file location for the dynamic tests.  
 * [project/workflow/parameter-template.json](project/workflow/parameter-template.json): Update with the template for the parameters your workflow is taking.  
+You can also change the workflow files once they are in the newly created codecommit git repository.  
 
 ---
 ## Versioning  
