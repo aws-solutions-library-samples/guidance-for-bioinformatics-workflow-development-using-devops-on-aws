@@ -37,14 +37,11 @@ Bootstrapping is the process of provisioning resources for the AWS CDK before yo
 These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
 The bootstrap process for this cross-account setup will be more complex than in a single-account case, because we must define the trust relationships between accounts.  
 First, make sure you have defined in your workstation profiles for all the accounts.  
-As an example, we can name the aws profiles for the accounts `cicd`, `dev` and `pro`.
+As an example, we can name the aws profiles for the accounts `cicd`, `dev` or `pro`.
 Follow this procedure:  
 
 ```bash
-cdk bootstrap aws://ACCOUNT-NUMBER-1/REGION-1 aws://ACCOUNT-NUMBER-2/REGION-2 ...
-# alternatively, you can use aws profiles:
 cdk bootstrap --profile cicd   --template ./lib/bootstrap-template.yml
-
 npx cdk bootstrap --profile pro --trust <CICD ACCOUNT_ID> aws://<PRO ACCOUNT_ID>/us-east-1 --template ./lib/bootstrap-template.yml
 ```
   
@@ -55,7 +52,7 @@ You can add more accounts for testing or other purposes to the pipeline by just 
 Just remember to bootstrap those accounts as well.  
     
 > [!WARNING]  
-> Always remove the account numbers and emails those edited files before sharing them (pushing to a public repo).  
+> Always remove the account numbers and emails from those edited files before sharing them (pushing to a public repo).  
   
 **Project deployment** 
 
@@ -66,9 +63,8 @@ The following command will deploy the project resources in your CI/CD account:
 npx cdk deploy --profile cicd
 ```
 
-As part of the deployment, you will see an AWS CodeCommit repository.  
-Another component deployed by CDK is a build/deploy pipeline, that will be triggered by pushes on the CoodeCommit repository.  
-Push the contents of this project (excluding node_modules and cdk.out folders) to this repository, and you're ready to start generating new versions of yoyr workflows and deploying them accross different stages and accounts in tour pipeline.
+Once the deployment finishes, you don't need to use cdk again unless you want to update the pipelines, buckets or other components included in the stacks.  
+You can also deploy multiple stacks for different workflows and branches.  Just edit file [bin/omics-cicd.ts](bin/omics-cicd.ts) and change worflowName and projectBranch properties.  When launched, this will generate dedicated repositories, pipelines, roles buckets, etc.  
 
 **Workflow Setup**  
   
@@ -80,6 +76,7 @@ Replace this folder contents with your own nextflow project, paying special atte
 * [ project/workflow/test.parameters.json ](project/workflow/test.parameters.json): Update with the bucket and testing file location for the dynamic tests.  
 * [project/workflow/parameter-template.json](project/workflow/parameter-template.json): Update with the template for the parameters your workflow is taking.  
 You can also change the workflow files once they are in the newly created codecommit git repository.  
+Every time you push a change to the branch tracked by codepipeline, a new build and release process will be triggered.  
 
 ---
 ## Versioning  
