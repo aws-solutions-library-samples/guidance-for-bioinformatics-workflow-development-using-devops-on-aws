@@ -41,8 +41,8 @@ As an example, we can name the aws profiles for the accounts `cicd`, `dev` or `p
 Follow this procedure:  
 
 ```bash
-cdk bootstrap --profile cicd   --template ./lib/bootstrap-template.yml
-npx cdk bootstrap --profile pro --trust <CICD ACCOUNT_ID> aws://<PRO ACCOUNT_ID>/us-east-1 --template ./lib/bootstrap-template.yml
+cdk bootstrap --profile cicd --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+npx cdk bootstrap --profile pro --trust <CICD ACCOUNT_ID> aws://<PRO ACCOUNT_ID>/us-east-1 --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
 ```
   
 Now it's time to configure the accounts in our cdk environments.  
