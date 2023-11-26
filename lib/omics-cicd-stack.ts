@@ -105,7 +105,11 @@ export class OmicsCicdStack extends Stack {
     //   IAM Roles
     const codeBuildRole = new iam.Role(this, 'codeBuildRole', {
       roleName: props.buildRoleName,
-      assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
+      assumedBy: new iam.CompositePrincipal(
+        new iam.ServicePrincipal('codebuild.amazonaws.com'),
+        // this role is used to test workflow runs. It needs to have a trust relationship with HealthOMics
+        new iam.ServicePrincipal('omics.amazonaws.com'),
+      ),
       description: 'CodeBuild standard Role',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
