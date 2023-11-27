@@ -29,7 +29,7 @@ fi
 echo "Launched workflow $WORKFLOW_RUN_ID"
 
 # Poll for the run to finish
-while [ "${RUNSTATUS}" != "COMPLETED"  ] || "${RUNSTATUS}" != "FAILED"  ]
+while [[ "${RUNSTATUS}" != "COMPLETED" && "${RUNSTATUS}" != "FAILED"  ]]
 do
     RUNSTATUS=$(aws omics get-run --id $WORKFLOW_RUN_ID --query 'status')
     echo "### Run id ${WORKFLOW_RUN_ID} state is ${RUNSTATUS}..."
