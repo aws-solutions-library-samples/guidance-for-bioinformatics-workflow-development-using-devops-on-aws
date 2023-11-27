@@ -35,7 +35,7 @@ params.reads1 = "$baseDir/data/ggal/ggal_gut_1.fq"
 params.reads2 = "$baseDir/data/ggal/ggal_gut_2.fq"
 params.transcriptome = "$baseDir/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa"
 params.outdir = "results"
-params.multiqc = "/multiqc"
+params.multiqc = "/mnt/workflow/definition/multiqc"
 params.sample_id = 'ggal_gut'
 
 log.info """\
