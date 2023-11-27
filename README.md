@@ -4,9 +4,7 @@ The resources for this project can be deployed using cdk.
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
-## Deployment  
-
-### Prerequisites  
+## Prerequisites  
 
 * Two (or more) AWS accounts  
 * AdministratorAccess policy granted to your AWS account (for production, we recommend restricting access as needed)  
@@ -17,19 +15,20 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 * AWS CDK CLI installed  
 * Python 3+ installed  
 
-### Installation  
+## Installation  
 
 ```bash
 npm install && npm run build
 ```
 
-**cdk bootstrapping**  
+
+## CDK bootstrapping
   
 Choose two (or more) aws accounts to deploy the resources:  
-| aws account# | purpose | alias |  |  |
-|---|---|---|---|---|
-| xxxxxxxxxxxx | CI/CD tooling | CI/CD |  |  |
-| xxxxxxxxxxxx | deployment account 1 | PROD |  |  |
+| aws account# | purpose              | alias |
+| ------------ | -------------------- | ----- |
+| xxxxxxxxxxxx | CI/CD tooling        | CI/CD |
+| xxxxxxxxxxxx | deployment account 1 | PROD  |
   
 By default, this project works with CI/CD and one (production) deployment account, but it can be easily extended to work with additional accounts.  
 Once you have chosen the accounts and have its account numbers, it's time to bootstrap them.  
@@ -41,8 +40,15 @@ As an example, we can name the aws profiles for the accounts `cicd`, `dev` or `p
 Follow this procedure:  
 
 ```bash
-cdk bootstrap --profile cicd --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
-npx cdk bootstrap --profile pro --trust <CICD ACCOUNT_ID> aws://<PRO ACCOUNT_ID>/us-east-1 --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+cdk bootstrap 
+    --profile cicd 
+    aws://<PRO ACCOUNT_ID>/<AWS_REGION> 
+    --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+cdk bootstrap 
+    --profile pro 
+    --trust <CICD ACCOUNT_ID> 
+    aws://<PRO ACCOUNT_ID>/<AWS_REGION> 
+    --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
 ```
   
 Now it's time to configure the accounts in our cdk environments.  
@@ -54,19 +60,19 @@ Just remember to bootstrap those accounts as well.
 > [!WARNING]  
 > Always remove the account numbers and emails from those edited files before sharing them (pushing to a public repo).  
   
-**Project deployment** 
+## Deployment 
 
 Given you have aws cli and cdk installed in your machine, define your default aws profile to use CI/CD account, or specify it using --profile option.  
 The following command will deploy the project resources in your CI/CD account:  
   
 ```bash
-npx cdk deploy --profile cicd
+npx cdk deploy --profile cicd --all
 ```
 
 Once the deployment finishes, you don't need to use cdk again unless you want to update the pipelines, buckets or other components included in the stacks.  
 You can also deploy multiple stacks for different workflows and branches.  Just edit file [bin/omics-cicd.ts](bin/omics-cicd.ts) and change worflowName and projectBranch properties.  When launched, this will generate dedicated repositories, pipelines, roles buckets, etc.  
 
-**Workflow Setup**  
+## Workflow Setup  
   
 This project currently supports only nextflow pipelines.  
 It comes with a preconfigured workflow definition, under [project/workflow](project/workflow) folder.  
