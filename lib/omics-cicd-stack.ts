@@ -11,6 +11,7 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import { DeployEnvironment } from "../types";
 import * as path from 'path';
 
+import { OmicsWorkflowRole } from './omics-base';
 
 // extend the props of the stack by adding some params
 export interface OmicsCicdStackProps extends StackProps {
@@ -107,8 +108,6 @@ export class OmicsCicdStack extends Stack {
       roleName: props.buildRoleName,
       assumedBy: new iam.CompositePrincipal(
         new iam.ServicePrincipal('codebuild.amazonaws.com'),
-        // this role is used to test workflow runs. It needs to have a trust relationship with HealthOMics
-        new iam.ServicePrincipal('omics.amazonaws.com'),
       ),
       description: 'CodeBuild standard Role',
       managedPolicies: [
@@ -203,6 +202,20 @@ export class OmicsCicdStack extends Stack {
     });
 
     // Dynamic Tests Project
+    const omicsTesterRole = new OmicsWorkflowRole(this, 'omicsTesterRole', {
+      sourceS3Uris: ["s3://*/*"],
+      outputS3Arn: "arn:aws:s3:::" +  testFilesBucket.bucketName + "/*"
+    });
+
+    codeBuildRole.attachInlinePolicy(new iam.Policy(this, 'pass-role-access', {
+      statements: [
+        new iam.PolicyStatement({
+          actions: ['iam:PassRole'],
+          resources: [omicsTesterRole.roleArn]
+        })
+      ]
+    }))
+
     const testProject = new codebuild.PipelineProject(this, 'test_project', {
       projectName: 'test_project-'.concat(props.workflowName),
       role: codeBuildRole,
@@ -211,7 +224,7 @@ export class OmicsCicdStack extends Stack {
         WFNAME: { value: props.workflowName },
         ACCOUNT_ID: { value: this.account },
         TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
-        OMICS_TESTER_ROLE_ARN: { value: codeBuildRole.roleArn }
+        OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
       },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
@@ -278,7 +291,7 @@ export class OmicsCicdStack extends Stack {
         WFNAME: { value: props.workflowName },
         ACCOUNT_ID: { value: props.cicdEnv.env.account },
         TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
-        OMICS_TESTER_ROLE_ARN: { value: codeBuildRole.roleArn }
+        OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
       }, extraInputs: [buildOutput],
       outputs: [new codepipeline.Artifact()],
       executeBatchBuild: false,
