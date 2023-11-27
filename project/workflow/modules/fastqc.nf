@@ -16,7 +16,8 @@ process FASTQC {
     script:
     """
     echo "Running fastqc"
-    fastqc "$sample_id" "$reads1 $reads2"
+    mkdir -p ./fastqc_${sample_id}_logs
+    fastqc -o ./fastqc_${sample_id}_logs "$reads1" "$reads2"
     echo "Command done"
     ls -Rl && sleep 60
     """
