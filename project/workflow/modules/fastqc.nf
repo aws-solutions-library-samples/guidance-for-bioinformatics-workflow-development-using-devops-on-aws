@@ -16,7 +16,7 @@ process FASTQC {
     script:
     """
     echo "Running fastqc"
-    bash /usr/bin/fastqc.sh "$sample_id" "$reads1 $reads2"
+    fastqc "$sample_id" "$reads1 $reads2"
     echo "Command done"
     ls -Rl && sleep 60
     """
