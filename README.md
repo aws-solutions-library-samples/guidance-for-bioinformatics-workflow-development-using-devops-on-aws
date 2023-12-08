@@ -1,92 +1,163 @@
-# healthomics-workflows-cicd
+# Welcome to AWS HealthOmics CI/CD pipelines
 
+The resources for this project can be deployed using cdk.  
 
+The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
-## Getting started
+## Prerequisites  
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+* Two (or more) AWS accounts  
+* AdministratorAccess policy granted to your AWS account (for production, we recommend restricting access as needed)  
+* Both console and programmatic access  
+* NodeJS 16 or 18 installed  
+* AWS CLI installed and configured to use with your AWS account  
+* Typescript 3.8+ installed  
+* AWS CDK CLI installed  
+* Python 3+ installed  
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Installation  
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
+```bash
+npm install && npm run build
 ```
-cd existing_repo
-git remote add origin https://gitlab.aws.dev/tfc/hcls/genomics/healthomics-workflows-cicd.git
-git branch -M main
-git push -uf origin main
+
+
+## CDK bootstrapping
+  
+Choose two (or more) aws accounts to deploy the resources:  
+| aws account# | purpose              | alias |
+| ------------ | -------------------- | ----- |
+| xxxxxxxxxxxx | CI/CD tooling        | CI/CD |
+| xxxxxxxxxxxx | deployment account 1 | PROD  |
+  
+By default, this project works with CI/CD and one (production) deployment account, but it can be easily extended to work with additional accounts.  
+Once you have chosen the accounts and have its account numbers, it's time to bootstrap them.  
+Bootstrapping is the process of provisioning resources for the AWS CDK before you can deploy AWS CDK apps into an AWS environment. (An AWS environment is a combination of an AWS account and Region).  
+These resources include an Amazon S3 bucket for storing files and IAM roles that grant permissions needed to perform deployments.  
+The bootstrap process for this cross-account setup will be more complex than in a single-account case, because we must define the trust relationships between accounts.  
+First, make sure you have defined in your workstation profiles for all the accounts.  
+As an example, we can name the aws profiles for the accounts `cicd`, `dev` or `pro`.
+Follow this procedure:  
+
+```bash
+cdk bootstrap 
+    --profile cicd 
+    aws://<PRO ACCOUNT_ID>/<AWS_REGION> 
+    --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+cdk bootstrap 
+    --profile pro 
+    --trust <CICD ACCOUNT_ID> 
+    aws://<PRO ACCOUNT_ID>/<AWS_REGION> 
+    --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+```
+  
+Now it's time to configure the accounts in our cdk environments.  
+Edit [bin/omics-cicd.ts](bin/omics-cicd.ts) file locally, and configure the aws account numbers and region for each environment.  
+In this example, there are 2 accounts (deployment stages) in the list.  
+You can add more accounts for testing or other purposes to the pipeline by just including them in deployEnvironments property.  
+Just remember to bootstrap those accounts as well.  
+    
+> [!WARNING]  
+> Always remove the account numbers and emails from those edited files before sharing them (pushing to a public repo).  
+  
+## Deployment 
+
+Given you have aws cli and cdk installed in your machine, define your default aws profile to use CI/CD account, or specify it using --profile option.  
+The following command will deploy the project resources in your CI/CD account:  
+  
+```bash
+npx cdk deploy --profile cicd --all
 ```
 
-## Integrate with your tools
+Once the deployment finishes, you don't need to use cdk again unless you want to update the pipelines, buckets or other components included in the stacks.  
+You can also deploy multiple stacks for different workflows and branches.  Just edit file [bin/omics-cicd.ts](bin/omics-cicd.ts) and change worflowName and projectBranch properties.  When launched, this will generate dedicated repositories, pipelines, roles buckets, etc.  
 
-- [ ] [Set up project integrations](https://gitlab.aws.dev/tfc/hcls/genomics/healthomics-workflows-cicd/-/settings/integrations)
+## Workflow Setup  
+  
+This project currently supports only nextflow pipelines.  
+It comes with a preconfigured workflow definition, under [project/workflow](project/workflow) folder.  
+The contents of this folder will be uploaded to the codecommit repository created by cdk, and used as source for the Amazon Healthomics custom workflow deployment.  
+Replace this folder contents with your own nextflow project, paying special attention to the next files:  
+* [project/workflow/nextflow.config](project/workflow/nextflow.config): Update your pipeline version and name so we can follow semantic versioning (see below).  
+* [ project/workflow/test.parameters.json ](project/workflow/test.parameters.json): Update with the bucket and testing file location for the dynamic tests.  
+* [project/workflow/parameter-template.json](project/workflow/parameter-template.json): Update with the template for the parameters your workflow is taking.  
+You can also change the workflow files once they are in the newly created codecommit git repository.  
+Every time you push a change to the branch tracked by codepipeline, a new build and release process will be triggered.  
 
-## Collaborate with your team
+---
+## Versioning  
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+Artifacts in this project are generated in the form of aws healthomics worflows.  
+In order to identify different versions, we propose to use semantic versioning.  
+This can be done using resource tags, but also including this information in the workflow name to make it easier to identify them.  
+The source for all this comes from the code repositories, where we use information from branch name and git tags to generate resource tags and resource names.  
+Tags are defined on a specific branch.  We propose using the following tag pattern:  
+```branchName-majorVersion.minorVersion.PatchVersion```  
+For example: lgg_iac-3.1.27  
 
-## Test and Deploy
+Artifact (Workflow) names are generated following the pattern:  
 
-Use the built-in continuous integration in GitLab.
+```workflowName-branchName-majorVersion.minorVersion.PatchVersion```  
+For example:
+RNAseqQC-lgg_iac-3.1.27  
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+The same applies to artifact tags. this is the list we are using:
+* WORKFLOW
+* BRANCH
+* MAJOR_VERSION
+* MINOR_VERSION
+* PATCH_VERSION
+* COMMIT_ID
+* BUILD_SOURCE
+* STARTED_BY
 
-***
+The workflow, major and minor version are taken from buildspec-build.yaml file in the project.  
+Branch, commit_id and build_source are taken from environment variables  
+Patch version is automatically generated based on previous tags in the branch.  
+  
+---
+## About Branch Strategy  
+  
+Different teams follow different strategies; this is really up to each organization.  
+Two of the most well known approaches are trunk-based and GitFlow.  Both are quite different and have its implications.  
+   
+### Gitflow
+GitFlow is a branching model designed around the project release. This provides a robust framework for managing larger projects.  
+Gitflow is ideally suited for projects that have a scheduled release cycle, but it’s not straight to use with aws CI/CD tools, and that’s why we have some solutions like [this](https://aws.amazon.com/blogs/devops/multi-branch-codepipeline-strategy-with-event-driven-architecture/)  
+But this approach is too complex, and hence fragile.  
+  
+### Trunk-based  
+Trunk-based development is a version control management practice where developers merge small, frequent updates to a core “trunk” or main branch. It streamlines merging and integration phases, and as the above mentioned blogpost says: *“It’s important to note that trunk-based is, by far, the best strategy for taking full advantage of a DevOps approach; this is the branching strategy that AWS recommends to its customers. On the other hand, many customers like to work with multiple branches and believe it justifies the effort and complexity in dealing with branching merges. This solution is for these customers.”*  
+It's similar to [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow).  
+The downside is that in this case, only main branch is subject to automated build, test and deploy.  
+This limits the ways teams can take advantage of automation when working on different independent lines.  
+  
+A solition for this could be but combine it later with tests launched from the developers workstations when working on development branches.  
+These tests would emulate what the build pipeline does, using IaC and probably CDK, but on the developer’s accounts, and launched from the developer’s workstation.  
+  
+Deployment to production account is triggered when a new commit is sent to the main branch, and it has a git tag following a pattern (TBD).  
+This is [supported](https://aws.amazon.com/about-aws/whats-new/2023/10/aws-codepipeline-triggering-git-tags/) by codepipelines V2, but CDK currently only supports pipelines V1.  
+So we implemented triggers for every commit and conditions for tags.  
 
-# Editing this README
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Issues:
+**Problem** 
+Can't use parameters, because cdk creates an additional stack, which doesn't accept it  
+```
+EventBusPolicy-<account1>-us-east-1-<account2> (OmicsDeployPipelinesStack-EventBusPolicy-support-us-east-1-<account1>) failed: Error [ValidationError]: Parameters: [workflowName] do not exist in the template
+```
+**Solution**  
+Edit [bin/cdk.ts](bin/cdk.ts) file locally and add it  
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+**Problem**  
+Cross-account events for codecommit tigger on deployment account fail to deploy:  
+4:03:43 PM | CREATE_FAILED        | AWS::Events::Rule           | workflowscodegitOm...nEventRuleB653F5F6
+Resource handler returned message: "RoleArn is required for target arn:aws:events:us-east-1:xxxxxxxxxxxx:event-bus/default. (Service: EventBridge, Status Code: 400, Request ID: 609c5786-5479-4e98-b6fa-7ab3267ddfb1)" (RequestToken: b3e801da-75b3-91dd-0b63-568fc5427130, HandlerErrorCode: GeneralService
+Exception)
 
-## Name
-Choose a self-explaining name for your project.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+ ❌  OmicsBuildPipelinesStack failed: Error: The stack named OmicsBuildPipelinesStack failed to deploy: UPDATE_ROLLBACK_COMPLETE: Resource handler returned message: "RoleArn is required for target arn:aws:events:us-east-1:xxxxxxxxxxxx:event-bus/default. (Service: EventBridge, Status Code: 400, Request ID: 609c5786-5479-4e98-b6fa-7ab3267ddfb1)" (RequestToken: b3e801da-75b3-91dd-0b63-568fc5427130, HandlerErrorCode: GeneralServiceException)
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+**Solution**  
+Try using CDK pipelines  
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.

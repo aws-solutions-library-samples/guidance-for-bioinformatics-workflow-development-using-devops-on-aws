@@ -1,0 +1,14 @@
+{
+    "reads1": {
+        "description": "s3 path to read1 of pair"
+    },
+    "reads2": {
+        "description": "s3 path to read2 of pair"
+    },
+    "transcriptome": {
+        "description": "path to the transcriptome fasta"
+    },
+    "sample_id": {
+        "description": "sample identifier string"
+    }
+}
