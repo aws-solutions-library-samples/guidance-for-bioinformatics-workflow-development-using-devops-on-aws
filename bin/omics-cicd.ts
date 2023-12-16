@@ -5,9 +5,9 @@ import { OmicsCicdStack } from '../lib/omics-cicd-stack';
 import { OmicsDeployResourcesStack } from '../lib/omics-deploy-resources-stack';
 
 
-const envCICD = { account: '<cicd account id>', region: 'us-east-1' };
-const envTest = { account: '<test account id>', region: 'us-east-1' };
-const envPro = { account: '<prod account id>', region: 'us-east-1' };
+const envCICD = { account: '968038207812', region: 'us-east-1' };
+const envTest = { account: '523155489867', region: 'us-east-1' };
+const envPro = { account: '691366922852', region: 'us-east-1' };
 const workflowName = 'nextflow-rnaseq';
 const projectBranch = 'main';
 const buildRoleName = 'codeBuildRole-'+workflowName;
