@@ -31,7 +31,7 @@ echo "Launched workflow $WORKFLOW_RUN_ID"
 # Poll for the run to finish
 while [[ "${RUNSTATUS}" != "COMPLETED" && "${RUNSTATUS}" != "FAILED"  ]]
 do
-    RUNSTATUS=$(aws omics get-run --id $WORKFLOW_RUN_ID --query 'status')
+    RUNSTATUS=$(aws omics get-run --id $WORKFLOW_RUN_ID --query 'status' --output text)
     echo "### Run id ${WORKFLOW_RUN_ID} state is ${RUNSTATUS}..."
     # Omics CLI wait breaks after 20 iterations; could be configured in python
     # for simplicity we add polling loop here
