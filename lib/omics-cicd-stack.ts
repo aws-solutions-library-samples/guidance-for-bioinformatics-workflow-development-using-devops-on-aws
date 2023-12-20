@@ -1,4 +1,4 @@
-import { CfnParameter, Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
+import { CfnParameter, Stack, StackProps, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
@@ -8,10 +8,13 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions'
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { DeployEnvironment } from "../types";
 import * as path from 'path';
-
+import * as fs from "fs";
 import { OmicsWorkflowRole } from './omics-base';
+
 
 // extend the props of the stack by adding some params
 export interface OmicsCicdStackProps extends StackProps {
@@ -20,7 +23,7 @@ export interface OmicsCicdStackProps extends StackProps {
   cicdEnv: DeployEnvironment,
   buildRoleName: string,
   deployEnv: DeployEnvironment,
-  deployBucket: s3.Bucket,
+  deployBucket: s3.Bucket
 }
 
 export class OmicsCicdStack extends Stack {
@@ -164,7 +167,7 @@ export class OmicsCicdStack extends Stack {
     this.workflowsCodeRepo = new codecommit.Repository(this, 'workflows_code_git', {
       repositoryName: `healthomics-${props.workflowName}-workflow`,
       //repositoryName: 'healthomics-workflow',
-      code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), 'props.projectBranch'),
+      code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), props.projectBranch),
       description: `HealthOmics Workflows Git Repository for ${props.workflowName} workflow.`,
     })
 
@@ -232,7 +235,97 @@ export class OmicsCicdStack extends Stack {
       },
     });
 
+    const healthOmicsWorkflowServiceRole = new iam.Role(this, 'healthOmicsWorkflowServiceRole', {
+      roleName: "healthOmicsWorkflowServiceRole",
+      assumedBy: new iam.ServicePrincipal('omics.amazonaws.com'),
+      description: 'b',
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryPowerUser"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("CloudWatchLogsFullAccess")
+      ],
+      inlinePolicies: {
+      },
+    });
 
+    // 👇 Create IAM Get/Pass Role for HealthOmics
+    const passWorkflowJobROle = new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          resources: [healthOmicsWorkflowServiceRole.roleArn],
+          actions: ['iam:GetRole', 'iam:PassRole']
+        }),
+      ],
+    });
+
+    const runHealthOmicsWorkflowLambdaRole = new iam.Role(this, 'runHealthOmicsWorkflowLambdaRole', {
+      roleName: "RunHealthOmicsWorkflowLambdaRole",
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      description: 'b',
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess")
+      ],
+      inlinePolicies: {       
+        AllowPassRole: passWorkflowJobROle
+      },
+    });
+
+    
+    // Function to run HealthOmics workflow 
+    const runHealthOmicsWorkflow = new lambda.Function(
+      this, "runHealthOmicsWorkflow",
+      {
+        functionName: "runHealthOmicsWorkflow",
+        runtime: lambda.Runtime.PYTHON_3_10,
+        handler: "lambda_function.handler",
+        timeout: Duration.seconds(300),
+        code: lambda.Code.fromAsset("lambda/startHealthOmicsWorkflow/"),
+        role: runHealthOmicsWorkflowLambdaRole,
+        environment: {
+        },
+      }
+    );
+    
+    const omicsGetRunPolicy = new iam.PolicyDocument({
+      statements: [new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "omics:GetRun",
+        ],
+        resources: ['*']
+      })],
+    });
+
+    const runHealthOmicsStateMachineRole = new iam.Role(this, 'runHealthOmicsStateMachineRole', {
+      roleName: "RunHealthOmicsWorkflowStateMachineRole",
+      assumedBy: new iam.ServicePrincipal('states.amazonaws.com'),
+      description: 'b',
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AWSLambda_FullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXrayFullAccess")
+      ],
+      inlinePolicies: {
+        OmicsGetRunPolicy: omicsGetRunPolicy   
+      },
+    });
+
+    // Function to run Health Omics workflow and wait for success/failure
+    const stateMachineDefinitionJsonFile = fs.readFileSync(path.resolve(__dirname, '../step_function/healthomics_workflow_state_machine.json'))
+    const omicsWorkflowStateMachine = new sfn.CfnStateMachine(this, 'health-omics-workflow-state-machine', {
+      roleArn: runHealthOmicsStateMachineRole.roleArn,
+      stateMachineName: "health-omics-workflow-state-machine",
+      definitionString: stateMachineDefinitionJsonFile.toString(),
+      definitionSubstitutions: {
+        "HealthOmicsWorkflowLambdaName": "runHealthOmicsWorkflow",
+        "HealthOmicsWorkflowJobRole": omicsTesterRole.roleArn,
+        "HealthOmicsWorkflowOutputS3": `s3://${testFilesBucket.bucketName}/outputs`,
+        "HealthOmicsWorkflowParamsS3": `s3://${testFilesBucket.bucketName}/test_params_cicd_nextflow_rnaseq.json`
+      }
+    });
+    const stateMachineObject = sfn.StateMachine.fromStateMachineName(this, 'statemachineid', "health-omics-workflow-state-machine");
     //// Pipelines
 
     // Pipeline artifacts
@@ -255,7 +348,7 @@ export class OmicsCicdStack extends Stack {
       actionName: 'CodeCommit',
       repository: this.workflowsCodeRepo,
       output: sourceOutput,
-      branch: 'props.projectBranch',
+      branch: `${props.projectBranch}`,
       codeBuildCloneOutput: true, // clone full git repo to handle tags
       trigger: codepipeline_actions.CodeCommitTrigger.EVENTS,
     });
@@ -283,24 +376,31 @@ export class OmicsCicdStack extends Stack {
 
 
     // Pipeline test stage
-    const testAction = new codepipeline_actions.CodeBuildAction({
-      actionName: 'workflow_test_action',
-      project: testProject,
-      input: sourceOutput,
-      environmentVariables: {
-        WFNAME: { value: props.workflowName },
-        ACCOUNT_ID: { value: props.cicdEnv.env.account },
-        TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
-        OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
-      }, extraInputs: [buildOutput],
-      outputs: [new codepipeline.Artifact()],
-      executeBatchBuild: false,
-      combineBatchBuildArtifacts: false,
-    });
+    //const testAction = new codepipeline_actions.CodeBuildAction({
+    //  actionName: 'workflow_test_action',
+    //  project: testProject,
+    //  input: sourceOutput,
+    //  environmentVariables: {
+    //    WFNAME: { value: props.workflowName },
+    //    ACCOUNT_ID: { value: props.cicdEnv.env.account },
+    //    TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
+    //    OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
+    //  }, extraInputs: [buildOutput],
+    //  outputs: [new codepipeline.Artifact()],
+    //  executeBatchBuild: false,
+    //  combineBatchBuildArtifacts: false,
+    //});
 
+    // Pipeline test stage
     const testStage = buildPipeline.addStage({
       stageName: 'Test',
     });
+    const testAction = new codepipeline_actions.StepFunctionInvokeAction({
+      actionName: 'Invoke',
+      stateMachine: stateMachineObject,
+      stateMachineInput: codepipeline_actions.StateMachineInput.filePath(buildOutput.atPath('workflow.json')),
+    });
+
     testStage.addAction(testAction);
 
     // Build pipeline approval stage

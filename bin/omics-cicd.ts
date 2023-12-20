@@ -18,7 +18,7 @@ const testEnvResourcesStack = new OmicsDeployResourcesStack(app, 'testSupportRes
   env: envPro,
   workflowName: workflowName,
   buildRoleName: buildRoleName,
-  cicdEnv: { name: "CICD", env: envCICD },
+  cicdEnv: { name: "CICD", env: envCICD }
 });
 
 // Stack for CICD resources, including pipeline

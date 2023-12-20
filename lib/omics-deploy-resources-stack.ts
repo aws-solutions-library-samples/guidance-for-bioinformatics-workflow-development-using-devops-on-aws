@@ -7,9 +7,6 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { DeployEnvironment } from "../types";
-import { S3Location } from 'aws-cdk-lib/aws-stepfunctions-tasks';
-import { PrefixList } from 'aws-cdk-lib/aws-ec2';
-
 
 
 // extend the props of the stack by adding some params
@@ -24,6 +21,7 @@ export class OmicsDeployResourcesStack extends Stack {
   public readonly deployRole: iam.Role;
   public readonly deployBucket: s3.Bucket;
   public readonly deployKeyArn: string;
+
   constructor(scope: Construct, id: string, props: OmicsDeployResourcesProps) {
     super(scope, id, props);
 
@@ -43,7 +41,7 @@ export class OmicsDeployResourcesStack extends Stack {
     });
 
     // IAM Roles
-    this.crossAccountRole = new iam.Role(this, 'crossAcoountRole', {
+    this.crossAccountRole = new iam.Role(this, 'crossAccountRole', {
       roleName: `CrossAccountRole-${props.workflowName}`,
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
       description: 'CodeBuild standard Role',
@@ -85,6 +83,8 @@ export class OmicsDeployResourcesStack extends Stack {
       },
     });
 
+    
+
     // Service Role from CICD stack used by codepipeline
     const cicdPipelineRole = new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/${props.buildRoleName}`)
 
@@ -114,11 +114,13 @@ export class OmicsDeployResourcesStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
     this.deployBucket.grantRead(new iam.AccountPrincipal(props.cicdEnv.env.account));
+    this.deployBucket.grantPut(new iam.AccountPrincipal(props.cicdEnv.env.account));
     //this.deployBucket.grantReadWrite(new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/codePipelineRole-${props.workflowName}`));
     //this.deployBucket.grantReadWrite(new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/OmicsCicdMinimalStack*`));
     this.deployBucket.grantRead(this.deployRole);
     this.deployBucket.grantReadWrite(cicdPipelineRole);
     this.deployBucket.grantRead(runReleaseBuildLambdaRole);
+
     
     //// CodeBuild Projects
     // Build Project
@@ -135,6 +137,7 @@ export class OmicsDeployResourcesStack extends Stack {
         privileged: false,
       },
     });
+
 
     //// Lambda Functions
     
@@ -155,6 +158,7 @@ export class OmicsDeployResourcesStack extends Stack {
       }
     );
       
+
     // S3 Event and Trigger for Run Release CodeBuild Project Function
     const s3DeployPutEventSource = new lambdaEventSources.S3EventSource(this.deployBucket, {
       events: [

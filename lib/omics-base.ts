@@ -10,6 +10,11 @@ function uriToS3Arn(uri: string) : string {
     return "arn:aws:s3:::" + url.hostname + url.pathname;
 }
 
+function uriToS3BucketArn(uri: string) : string {
+    const url = new URL(uri);
+    return "arn:aws:s3:::" + url.hostname;
+}
+
 export interface OmicsWorkflowRoleProps {
     description?: string,
     sourceS3Uris: string[],
@@ -21,6 +26,7 @@ export class OmicsWorkflowRole extends iam.Role {
 
         // parse bucket name and prefixes
         const sourceS3Arns = props.sourceS3Uris.map(uriToS3Arn);
+        const sourceS3BucketArns = props.sourceS3Uris.map(uriToS3BucketArn);
 
         super(scope, id, {
             assumedBy: new iam.ServicePrincipal('omics.amazonaws.com'),
@@ -38,7 +44,7 @@ export class OmicsWorkflowRole extends iam.Role {
                             actions: [
                                 "s3:ListBucket"
                             ],
-                            resources: sourceS3Arns
+                            resources: sourceS3BucketArns
                         }),
                         new iam.PolicyStatement({
                             actions: [
