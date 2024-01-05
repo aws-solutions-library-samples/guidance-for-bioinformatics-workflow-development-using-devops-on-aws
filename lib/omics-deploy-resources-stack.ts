@@ -127,7 +127,7 @@ export class OmicsDeployResourcesStack extends Stack {
     const releaseProject = new codebuild.Project(this, 'releaseProject', {
       projectName: `release_project-${props.workflowName}`,
       role: this.deployRole,
-      buildSpec: codebuild.BuildSpec.fromAsset('project/cicd/buildspec-release.yaml'),
+      buildSpec: codebuild.BuildSpec.fromAsset('cicd/buildspec-release.yaml'),
       environmentVariables: {
         WFNAME: { value: props.workflowName },
         ACCOUNT_ID: { value: this.account },
