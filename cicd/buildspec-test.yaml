@@ -1,0 +1,31 @@
+version: 0.2
+
+env:
+  shell: bash
+  git-credential-helper: yes
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - export BASEDIR="${PWD}"
+      - export WFDIR="${BASEDIR}/workflow"    
+      - export CWD=$(pwd)
+      - export SCRIPTDIR="${CWD}/scripts"
+      - mkdir $SCRIPTDIR
+      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - aws s3 cp --recursive $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/"
+      - chmod +x $SCRIPTDIR}/*.sh
+      - export WFID=$(jq -r .id $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export workflow_major_version=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export workflow_minor_version=$(jq -r .tags.MINOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export NEXTPATCHVER=$(jq -r .tags.PATCH_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+  pre_build:
+    commands:
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
+  build:
+    commands:
+      - echo "Launch workflow deployed in previous step"
+      - bash -x $SCRIPTDIR/test_workflow.sh

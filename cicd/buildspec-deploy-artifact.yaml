@@ -1,0 +1,43 @@
+version: 0.2
+
+env:
+  shell: bash
+  git-credential-helper: yes
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - export BASEDIR="${CODEBUILD_SRC_DIR}"
+      - export WFDIR="${BASEDIR}/workflow"    
+      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - export CWD=$(pwd)
+      - export SCRIPTDIR="${CWD}/scripts"
+      - mkdir $SCRIPTDIR
+      - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
+      - chmod +x $SCRIPTDIR/*.sh
+      - export WFID=$(jq -r .id $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export BRANCH=$(jq -r .tags.BRANCH $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export MAJORV=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export MINORV=$(jq -r .tags.MINOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export PATCHV=$(jq -r .tags.PATCH_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export DEPLOYPATH="/artifacts/${WFNAME}/${BRANCH}/v${MAJORV}.${MINORV}.${PATCHV}"
+  pre_build:
+    commands:
+      - export WFID=$(jq -r .id $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export BRANCH=$(jq -r .tags.BRANCH $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export MAJORV=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export MINORV=$(jq -r .tags.MINOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export PATCHV=$(jq -r .tags.PATCH_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export DEPLOYPATH="artifacts/nextflow/${WFNAME}/${BRANCH}/v${MAJORV}.${MINORV}.${PATCHV}"
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
+  build:
+    commands:
+      - echo "Tagging commit..."
+      - $SCRIPTDIR/tag_commit.sh $PATCHV
+      - echo "Copying artifacts to target bucket ${DEPLOYBUCKET}"
+      - cd $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action
+      - for FILE in *;do aws s3 cp ${FILE} s3://${DEPLOYBUCKET}/${DEPLOYPATH}/${FILE} ; done

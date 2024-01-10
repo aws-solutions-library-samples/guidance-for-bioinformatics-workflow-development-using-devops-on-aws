@@ -1,0 +1,66 @@
+version: 0.2
+
+env:
+  variables:
+    workflow_engine: NEXTFLOW
+  shell: bash
+  git-credential-helper: yes
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - export BASEDIR="${CODEBUILD_SRC_DIR}"
+      - export PATH=$PATH:$BASEDIR 
+      - export WFDIR="${BASEDIR}/workflow"
+      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - export CWD=$(pwd)
+      - export SCRIPTDIR="${CWD}/scripts"
+      - mkdir $SCRIPTDIR
+      - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
+      - chmod +x $SCRIPTDIR/*.sh
+      - bash -x $SCRIPTDIR/buildenv_setup.sh
+  pre_build:
+    commands:
+      - MANIFESTVER=$(grep "version = " $WFDIR/nextflow.config | cut -d\' -f2)
+      - MAJORV=$(echo ${MANIFESTVER} | cut -d. -f1)
+      - MINORV=$(echo ${MANIFESTVER} | cut -d. -f2)
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - export CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
+      - cd $WFDIR
+      - echo "Verifying workflow definition is correct..."
+      - $BASEDIR/nextflow -c ./nextflow.config run -preview ./main.nf -params-file ./test.parameters.json
+      - cat .nextflow.log
+  build:
+    commands:
+      - cd $SCRIPTDIR
+      - bash -x $SCRIPTDIR/import_images.sh
+      - export LASTPATCHVER=$($SCRIPTDIR/get_last_patch.sh)
+      - export TAGNAME=$($SCRIPTDIR/get_next_tag_name.sh ${LASTPATCHVER})
+      - export NEXTPATCHVER="${TAGNAME##*.}"
+      - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
+      - export ARTIFACTFILE="workflow"
+      - cd ${WFDIR}
+      - zip -r ${BASEDIR}/${ARTIFACTFILE}.zip ./*
+      - cd $BASEDIR
+      - echo "Creating Workflow..."
+      - ls -l ${WFDIR}
+      - find $BASEDIR -name "parameter-template.json"
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://${BASEDIR}/${ARTIFACTFILE}.zip --parameter-template file://${WFDIR}/parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$NEXTPATCHVER)
+      - echo "${TMPWFINFO}" > $BASEDIR/${ARTIFACTFILE}.json
+      - cp $WFDIR/parameter-template.json $BASEDIR
+      - cp $WFDIR/container_pull_manifest.json $BASEDIR
+  post_build:
+    commands:
+      - aws omics list-workflows --type PRIVATE --name ${ARTIFACTNAME}
+
+artifacts:
+  files:
+    - ${ARTIFACTFILE}.zip
+    - ${ARTIFACTFILE}.json
+    - parameter-template.json
+    - container_pull_manifest.json
+    - test.parameters.json
+  name: ${ARTIFACTNAME}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION
