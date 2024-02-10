@@ -13,8 +13,13 @@ phases:
       - export BASEDIR="${CODEBUILD_SRC_DIR}"
       - export PATH=$PATH:$BASEDIR 
       - export WFDIR="${BASEDIR}/workflow"
-      - chmod +x $BASEDIR/cicd/scripts/*.sh
-      - $BASEDIR/cicd/scripts/buildenv_setup.sh
+      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - export CWD=$(pwd)
+      - export SCRIPTDIR="${CWD}/scripts"
+      - mkdir $SCRIPTDIR
+      - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
+      - chmod +x $SCRIPTDIR/*.sh
+      - bash -x $SCRIPTDIR/buildenv_setup.sh
   pre_build:
     commands:
       - MANIFESTVER=$(grep "version = " $WFDIR/nextflow.config | cut -d\' -f2)
@@ -30,9 +35,10 @@ phases:
       - cat .nextflow.log
   build:
     commands:
-      - bash -x ${BASEDIR}/cicd/scripts/import_images.sh
-      - export LASTPATCHVER=$($BASEDIR/cicd/scripts/get_last_patch.sh)
-      - export TAGNAME=$($BASEDIR/cicd/scripts/get_next_tag_name.sh ${LASTPATCHVER})
+      - cd $SCRIPTDIR
+      - bash -x $SCRIPTDIR/import_images.sh
+      - export LASTPATCHVER=$($SCRIPTDIR/get_last_patch.sh)
+      - export TAGNAME=$($SCRIPTDIR/get_next_tag_name.sh ${LASTPATCHVER})
       - export NEXTPATCHVER="${TAGNAME##*.}"
       - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
       - export ARTIFACTFILE="workflow"
@@ -56,4 +62,5 @@ artifacts:
     - ${ARTIFACTFILE}.json
     - parameter-template.json
     - container_pull_manifest.json
+    - test.parameters.json
   name: ${ARTIFACTNAME}-$(date +%Y-%m-%d)-$CODEBUILD_RESOLVED_SOURCE_VERSION

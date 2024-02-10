@@ -10,7 +10,12 @@ phases:
     commands:
       - export BASEDIR="${PWD}"
       - export WFDIR="${BASEDIR}/workflow"    
-      - chmod +x $BASEDIR/cicd/scripts/*.sh
+      - export CWD=$(pwd)
+      - export SCRIPTDIR="${CWD}/scripts"
+      - mkdir $SCRIPTDIR
+      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - aws s3 cp --recursive $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/"
+      - chmod +x $SCRIPTDIR}/*.sh
       - export WFID=$(jq -r .id $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export workflow_major_version=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
@@ -23,4 +28,4 @@ phases:
   build:
     commands:
       - echo "Launch workflow deployed in previous step"
-      - bash -x $BASEDIR/cicd/scripts/test_workflow.sh
+      - bash -x $SCRIPTDIR/test_workflow.sh

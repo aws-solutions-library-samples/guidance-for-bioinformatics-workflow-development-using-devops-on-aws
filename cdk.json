@@ -17,6 +17,9 @@
     ]
   },
   "context": {
+    "workflows": {
+      "nextflow-rnaseq": "healthomics-rnaseq-v2-workflow"
+    },
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": [
