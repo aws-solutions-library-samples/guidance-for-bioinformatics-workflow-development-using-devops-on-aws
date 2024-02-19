@@ -1,6 +1,0 @@
-{
-    "reads1": "s3://<BUCKETNAME>/data/ggal/ggal_gut_1.fq",
-    "reads2": "s3://<BUCKETNAME>/data/ggal/ggal_gut_2.fq",
-    "transcriptome": "s3://<BUCKETNAME>/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa",
-    "sample_id": "test1"
-}
