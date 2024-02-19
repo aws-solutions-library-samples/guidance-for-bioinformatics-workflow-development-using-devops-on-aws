@@ -1,9 +1,5 @@
 # Welcome to AWS HealthOmics CI/CD pipelines
 
-The resources for this project can be deployed using cdk.  
-
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
-
 ## Introduction  
 Secondary analysis pipelines in omics are software, and like any other software product they have versions that need to be tracked, tested, and released when ready for wider use. This also applies to [AWS HealthOmics](https://aws.amazon.com/healthomics/) workflows.  A public example of this are NF-Core pipelines that tend to have new releases on a rolling basis. Building, testing, and deploying new workflow versions is undifferentiated heavy lift. The goal of this solution to make the cloud resources for automated testing and deployment of secondary analysis (and other bioinformatics) pipelines easy to acquire, provision, and use.
 
