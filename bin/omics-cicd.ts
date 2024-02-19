@@ -9,7 +9,7 @@ const app = new cdk.App();
 
 const envCICD = { account: app.node.tryGetContext('cicd_account'), region: app.node.tryGetContext('aws_region') };
 const envTest = { account: app.node.tryGetContext('test_account'), region: app.node.tryGetContext('aws_region') };
-const envPro = { account: app.node.tryGetContext('prod_account'), region: app.node.tryGetContext('aws_region') };
+const envProd = { account: app.node.tryGetContext('prod_account'), region: app.node.tryGetContext('aws_region') };
 // const workflowName = 'nextflow-rnaseq';
 const projectBranch = 'main';
 const workflowNames = app.node.tryGetContext('workflows');
@@ -19,7 +19,7 @@ Object.keys(workflowNames).forEach(key => {
   console.log(key, workflowNames[key]);
   
   const testEnvResourcesStack = new OmicsDeployResourcesStack(app, 'testSupportResourcesStack', {
-    env: envPro,
+    env: envProd,
     workflowName: key,
     buildRoleName: buildRoleName,
     cicdEnv: { name: "CICD", env: envCICD }
