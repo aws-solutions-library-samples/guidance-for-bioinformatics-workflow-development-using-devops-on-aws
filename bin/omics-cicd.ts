@@ -13,12 +13,13 @@ const envProd = { account: app.node.tryGetContext('prod_account'), region: app.n
 // const workflowName = 'nextflow-rnaseq';
 const projectBranch = 'main';
 const workflowNames = app.node.tryGetContext('workflows');
+const sourceDataS3URIs = app.node.tryGetContext('source_data_s3_uris');
 const buildRoleName = 'omicsCiCdCodeBuildRole';
 
 Object.keys(workflowNames).forEach(key => {
   console.log(key, workflowNames[key]);
   
-  const testEnvResourcesStack = new OmicsDeployResourcesStack(app, 'testSupportResourcesStack', {
+  const deployResourcesStack = new OmicsDeployResourcesStack(app, 'OmicsCicdDeployResourcesStack', {
     env: envProd,
     workflowName: key,
     buildRoleName: buildRoleName,
@@ -31,7 +32,8 @@ Object.keys(workflowNames).forEach(key => {
     cicdEnv: { name: "cicd", env: envCICD },
     buildRoleName: buildRoleName,
     deployEnv: { name: "test", env: envTest },
-    deployBucket: testEnvResourcesStack.deployBucket
+    deployBucket: deployResourcesStack.deployBucket,
+    sourceDataS3URIs: sourceDataS3URIs,
   });
 
   // Stack for workflow specific CICD resources
@@ -43,10 +45,10 @@ Object.keys(workflowNames).forEach(key => {
     cicdEnv: { name: "cicd", env: envCICD },
     buildRoleName: buildRoleName,
     deployEnv: { name: "test", env: envTest },
-    deployBucket: testEnvResourcesStack.deployBucket,
+    deployBucket: deployResourcesStack.deployBucket,
     codePipelineRole: cicdCommonResourcesStack.codePipelineRole
   });
 
   cicdPerWorkflowResourcesStack.addDependency(cicdCommonResourcesStack);
-  testEnvResourcesStack.addDependency(cicdPerWorkflowResourcesStack);
+  deployResourcesStack.addDependency(cicdPerWorkflowResourcesStack);
 });

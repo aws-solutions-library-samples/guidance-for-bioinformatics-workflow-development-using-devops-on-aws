@@ -5,12 +5,12 @@ import { Construct } from 'constructs';
 
 import * as iam from 'aws-cdk-lib/aws-iam';
 
-function uriToS3Arn(uri: string) : string {
+export function uriToS3Arn(uri: string) : string {
     const url = new URL(uri);
     return "arn:aws:s3:::" + url.hostname + url.pathname;
 }
 
-function uriToS3BucketArn(uri: string) : string {
+export function uriToS3BucketArn(uri: string) : string {
     const url = new URL(uri);
     return "arn:aws:s3:::" + url.hostname;
 }

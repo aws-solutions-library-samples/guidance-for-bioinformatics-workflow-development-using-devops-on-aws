@@ -7,13 +7,15 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { DeployEnvironment } from "../types";
 import { OmicsWorkflowRole } from './omics-base';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import { uriToS3Arn, uriToS3BucketArn } from './omics-base';
 
 // extend the props of the stack by adding some params
 export interface OmicsCicdCommonStackProps extends StackProps {
   cicdEnv: DeployEnvironment,
   buildRoleName: string,
   deployEnv: DeployEnvironment,
-  deployBucket: s3.Bucket
+  deployBucket: s3.Bucket,
+  sourceDataS3URIs?: string[],
 }
 
 export class OmicsCommonCicdStack extends Stack {
@@ -119,6 +121,27 @@ export class OmicsCommonCicdStack extends Stack {
         DeployBucketPolicy: deployBucketPolicy
       },
     });
+
+    if (props.sourceDataS3URIs) {
+      const s3AccessPolicy = new iam.PolicyDocument({
+        statements: [
+          new iam.PolicyStatement({
+            actions: [ "s3:GetObject" ],
+            resources: props.sourceDataS3URIs.map(uriToS3Arn)
+          }),
+          new iam.PolicyStatement({
+            actions: [ "s3:ListBucket" ],
+            resources: props.sourceDataS3URIs.map(uriToS3BucketArn)
+          }),
+        ]
+      });
+
+      codeBuildRole.attachInlinePolicy(
+        new iam.Policy(this, 'S3AccessPolicy', {
+          document: s3AccessPolicy,
+        })
+      )
+    }
 
 
     const codePipelineRole = new iam.Role(this, 'codePipelineRole', {
