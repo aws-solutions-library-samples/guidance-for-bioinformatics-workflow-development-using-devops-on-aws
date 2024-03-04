@@ -18,6 +18,7 @@ phases:
       - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
       - export SCRIPTDIR="${BASEDIR}/scripts"
       - export STAGING_URI="s3://${TESTBUCKET}/${WFNAME}/staging/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
+      - export ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
       - printenv
       - mkdir -p $BASEDIR
       - mkdir -p $SCRIPTDIR
@@ -37,10 +38,15 @@ phases:
       
       # stage testing parameter files
       - cd $WFDIR
+      # add an 'ecr_registry' parameter to the test.parameters.json file, and substitute placeholders
+      # this is expected by example workflows in amazon-omics-tutorials
+      - TEST_PARAMS=$(jq '. + {"ecr_registry":$ecr_registry}' ./test.parameters.json --arg ecr_registry $ECR_REGISTRY)
+      - echo $TEST_PARAMS > ./test.parameters.json
       - sed -i'.bak' "s|{{staging_uri}}|$STAGING_URI|g" ./test.parameters.json
       - sed -i'.bak' "s|{{region}}|$AWS_REGION|g" ./test.parameters.json
       - aws s3 cp ./test.parameters.json ${STAGING_URI}/test.parameters.json
       - cat ./test.parameters.json
+      
       # these commands are specific to nf-core style nextflow workflows which use samplesheet.csv files
       - sed "s|{{region}}|$AWS_REGION|g" ./samplesheet-template.csv > ./samplesheet.csv
       - aws s3 cp ./samplesheet.csv ${STAGING_URI}/samplesheet.csv
