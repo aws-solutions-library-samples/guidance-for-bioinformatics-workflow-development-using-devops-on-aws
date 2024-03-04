@@ -4,9 +4,6 @@
 LASTPATCHVER=$1
 NEWPATCHVER=$((LASTPATCHVER+1))
 
-# Get script directory
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 # Get current branch name
 CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
 
