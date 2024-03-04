@@ -27,11 +27,11 @@ aws stepfunctions start-execution \
     --input file://container_pull_manifest.json
 
 # Include omics.config in workflow config
-HAVECONFIG=$(grep "omics-images.config" $WFDIR/nextflow.config  | wc -l)
-if [[ "${HAVECONFIG}" -eq 0 ]]
+if ! grep "omics-images.config" $WFDIR/nextflow.config
 then
     echo "includeConfig 'conf/omics-images.config'" >> $WFDIR/nextflow.config
 fi
+cat $WFDIR/nextflow.config
 
 # Uninstall omics helper?
 #cdk destroy --all --require-approval never
