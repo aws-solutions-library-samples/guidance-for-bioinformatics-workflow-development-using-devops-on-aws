@@ -60,13 +60,14 @@ phases:
       - export ARTIFACTFILE="workflow"
       
       - zip -r ${ARTIFACTS_DIR}/${ARTIFACTFILE}.zip ./* -x $BUILD_DIR_NAME/**\* ./work/**\* ./null/**\*
+      - aws s3 cp ${ARTIFACTS_DIR}/${ARTIFACTFILE}.zip ${STAGING_URI}/${ARTIFACTFILE}.zip
       - cp $WFDIR/parameter-template.json ${ARTIFACTS_DIR}
       - cp $WFDIR/container_pull_manifest.json ${ARTIFACTS_DIR}
       - cp $WFDIR/test.parameters.json ${ARTIFACTS_DIR}
 
       - cd ${ARTIFACTS_DIR}
       - echo "Creating Workflow..."
-      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://${ARTIFACTFILE}.zip --parameter-template file://parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$NEXTPATCHVER)
+      - TMPWFINFO=$(aws omics create-workflow --definition-uri ${STAGING_URI}/${ARTIFACTFILE}.zip --parameter-template file://parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$NEXTPATCHVER)
       - echo "${TMPWFINFO}" > ${ARTIFACTS_DIR}/${ARTIFACTFILE}.json
   post_build:
     commands:
