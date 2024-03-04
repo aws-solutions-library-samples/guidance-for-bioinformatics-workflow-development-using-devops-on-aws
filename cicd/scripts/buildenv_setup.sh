@@ -13,6 +13,8 @@ pip install git-remote-codecommit
 # Install Nextflow
 #sdk install java 17.0.6-amzn
 #sdk use java 17.0.6-amzn
+mkdir -p $BASEDIR/bin
+cd $BASEDIR/bin
 export CAPSULE_LOG=none
 wget -qO- https://get.nextflow.io | bash
 export PATH=$PATH:$(pwd)/nextflow
