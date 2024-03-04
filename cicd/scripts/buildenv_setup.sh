@@ -1,5 +1,7 @@
 #!/bin/bash
 
+BASEDIR=$1
+
 echo "OS Environment Setup"
 
 # Install aws tools
