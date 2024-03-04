@@ -1,14 +1,22 @@
 #!/bin/bash
 
-# Get script directory
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DEFAULT_REGISTRY_NAMESPACE="$BASEDIR/amazon-ecr-helper-for-aws-healthomics/lib/lambda/parse-image-uri/public_registry_properties.json"
+REGISTRY_NAMESPACE="-n $DEFAULT_REGISTRY_NAMESPACE"
+if [[ -f public_registry_properties.json ]]; then
+    REGISTRY_NAMESPACE="-n public_registry_properties.json"
+fi
+
+SUBSTITUTIONS=""
+if [[ -f container_substitutions.json ]]; then
+    SUBSTITUTIONS="-s container_substitutions.json"
+fi
 
 # Look for public image references in workflow, generate manifests
 cd $WFDIR
 mkdir -p $WFDIR/conf
 python3 $BASEDIR/amazon-omics-tutorials/utils/scripts/inspect_nf.py \
-    -n public_registry_properties.json \
-    -s container_substitutions.json \
+    $REGISTRY_NAMESPACE \
+    $SUBSTITUTIONS \
     --output-config-file $WFDIR/conf/omics-images.config \
     --output-manifest-file $WFDIR/container_pull_manifest.json \
     .

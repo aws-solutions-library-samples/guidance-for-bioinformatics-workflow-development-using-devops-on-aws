@@ -19,9 +19,13 @@ export CAPSULE_LOG=none
 wget -qO- https://get.nextflow.io | bash
 export PATH=$PATH:$(pwd)/nextflow
 
-# Deploy Omics Helper inf not present in account...
+# Get amazon-omics-tutoarials. Utility script inspect_nf.py is used for build.
 cd $BASEDIR
-git clone https://github.com/aws-samples/amazon-omics-tutorials.git
+git clone https://github.com/aws-samples/amazon-omics-tutorials
+
+# Deploy Omics Helper if not present in account...
+cd $BASEDIR
+git clone https://github.com/aws-samples/amazon-ecr-helper-for-aws-healthomics.git
 HAVEHELPER=$(aws cloudformation list-stacks --output text | grep CREATE_COMPLETE | grep OmxEcrHelper-ContainerBuilder | wc -l)
 # Skip this installation check,
 #  cdk is idempotent here and  this way we could keep the helper up to date
@@ -36,9 +40,8 @@ then
     npm install fs -g
     npm update -g aws-cdk
 
-    cd amazon-omics-tutorials
+    cd amazon-ecr-helper-for-aws-healthomics
     git pull origin
-    cd utils/cdk/omx-ecr-helper
     npm install
     cdk deploy --all --require-approval never
 else
