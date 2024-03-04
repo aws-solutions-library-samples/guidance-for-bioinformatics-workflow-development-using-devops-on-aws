@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euxo pipefail
 
 DEFAULT_REGISTRY_NAMESPACE="$BASEDIR/amazon-ecr-helper-for-aws-healthomics/lib/lambda/parse-image-uri/public_registry_properties.json"
 REGISTRY_NAMESPACE="-n $DEFAULT_REGISTRY_NAMESPACE"
