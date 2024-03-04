@@ -26,24 +26,15 @@ git clone https://github.com/aws-samples/amazon-omics-tutorials
 # Deploy Omics Helper if not present in account...
 cd $BASEDIR
 git clone https://github.com/aws-samples/amazon-ecr-helper-for-aws-healthomics.git
-HAVEHELPER=$(aws cloudformation list-stacks --output text | grep CREATE_COMPLETE | grep OmxEcrHelper-ContainerBuilder | wc -l)
-# Skip this installation check,
-#  cdk is idempotent here and  this way we could keep the helper up to date
-if [[ "${HAVEHELPER}" -eq 0 ]]
-then
-    echo "Installing omics helper..."
-    npm install aws-cdk -g
-    alias cdk='npx aws-cdk'
+echo "Installing omics helper..."
+npm install aws-cdk -g
+alias cdk='npx aws-cdk'
 
-    npm install ts-node -g
-    npm install aws-cdk-lib -g
-    npm install fs -g
-    npm update -g aws-cdk
+npm install ts-node -g
+npm install aws-cdk-lib -g
+npm install fs -g
+npm update -g aws-cdk
 
-    cd amazon-ecr-helper-for-aws-healthomics
-    git pull origin
-    npm install
-    cdk deploy --all --require-approval never
-else
-    echo "Omics helper already installed in this account"
-fi
+cd amazon-ecr-helper-for-aws-healthomics
+npm install
+cdk deploy --all --require-approval never
