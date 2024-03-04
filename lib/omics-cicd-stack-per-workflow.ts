@@ -118,8 +118,9 @@ export class OmicsCicdPerWorkflowStack extends Stack {
       definitionSubstitutions: {
         "HealthOmicsWorkflowLambdaName": "runHealthOmicsWorkflow",
         "HealthOmicsWorkflowJobRole": omicsTesterRole.roleArn,
-        "HealthOmicsWorkflowOutputS3": `s3://${testFilesBucketName}/test_workflow_outputs/${props.workflowName}`,
-        "HealthOmicsWorkflowParamsS3": `s3://${testFilesBucketName}/test_data/${props.workflowName}/test.parameters.json`
+        "HealthOmicsWorkflowOutputS3": `s3://${testFilesBucketName}/${props.workflowName}/output`,
+        "HealthOmicsWorkflowStagingS3": `s3://${testFilesBucketName}/${props.workflowName}/staging`,
+        "HealthOmicsWorkflowParamsFile": `test.parameters.json`
       }
     });
     const stateMachineObject = sfn.StateMachine.fromStateMachineName(this, `sfnId-${props.workflowName}`, `test-healthomics-sfn-${props.workflowName}`);

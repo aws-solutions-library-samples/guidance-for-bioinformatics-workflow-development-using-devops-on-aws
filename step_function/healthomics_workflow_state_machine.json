@@ -4,7 +4,7 @@
     "States": {
       "PrepareInputs": {
         "Type": "Pass",
-        "ResultPath": "$.worklflow",
+        "ResultPath": "$.workflow",
         "Next": "RunOmicsWorkflowLambda"
       },
       "RunOmicsWorkflowLambda": {
@@ -13,8 +13,10 @@
         "Parameters": {
           "FunctionName": "${HealthOmicsWorkflowLambdaName}",
           "Payload": {
-            "WorkflowParamsS3File": "${HealthOmicsWorkflowParamsS3}",
+            "WorkflowStagingS3Path": "${HealthOmicsWorkflowStagingS3}",
+            "WorkflowParamsFile": "${HealthOmicsWorkflowParamsFile}",
             "WorkflowId.$": "$.id",
+            "CommitId.$": "$.tags.COMMIT_ID",
             "JobRoleArn": "${HealthOmicsWorkflowJobRole}",
             "OutputS3Path": "${HealthOmicsWorkflowOutputS3}"
           }

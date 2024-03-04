@@ -2,6 +2,7 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 import json
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +17,9 @@ def download_file(bucket, key, filename):
     try:
         response = s3.download_file(bucket, key, filename)
     except ClientError as e:
-        raise Exception( "boto3 client error : " + e.__str__())
+        raise Exception( f"download 's3://{bucket}/{key}' : boto3 client error : " + e.__str__())
     except Exception as e:
-       raise Exception( "Unexpected error : " +    e.__str__())
+       raise Exception( f"download 's3://{bucket}/{key}' : Unexpected error : " +    e.__str__())
     logger.info(response)
     return filename
 
@@ -26,9 +27,16 @@ def handler(event, context):
     omics_session = boto3.Session()
     omics_client = omics_session.client('omics')
     workflow_id = event['WorkflowId']
+    commit_id = event['CommitId']
+    params_file = event['WorkflowParamsFile']
     role_arn = event['JobRoleArn']
     output_s3_path = event['OutputS3Path']
-    __bucket, __key = get_bucket_key(event['WorkflowParamsS3File'])
+
+    url = urlparse(event['WorkflowStagingS3Path'])
+    __bucket = url.netloc
+    __prefix = url.path.lstrip('/').rstrip('/')
+    __key = f"{__prefix}/{commit_id}/{params_file}"
+
     params_file = download_file(__bucket,__key,'/tmp/params.json')
 
     with open(params_file) as f:
