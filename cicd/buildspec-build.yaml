@@ -19,22 +19,27 @@ phases:
       - export SCRIPTDIR="${BASEDIR}/scripts"
       - export STAGING_URI="s3://${TESTBUCKET}/${WFNAME}/staging/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
       - export ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-      - printenv
+      - export MANIFESTVER=$(grep -E "\s+version\s+=\s*'.*?'" $WFDIR/nextflow.config | cut -d\' -f2)
+      - export MAJORV=$(echo ${MANIFESTVER} | cut -d. -f1)
+      - export MINORV=$(echo ${MANIFESTVER} | cut -d. -f2)
+      - export CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - git config --global user.email "CodeBuild@example.com"
+      - git config --global user.name "CodeBuild"
       - mkdir -p $BASEDIR
       - mkdir -p $SCRIPTDIR
       - mkdir -p $ARTIFACTS_DIR
       - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
       - chmod +x $SCRIPTDIR/*.sh
       - bash -x $SCRIPTDIR/buildenv_setup.sh $BASEDIR
+      - export LASTPATCHVER=$($SCRIPTDIR/get_last_patch.sh)
+      - export TAGNAME=$($SCRIPTDIR/get_next_tag_name.sh ${LASTPATCHVER})
+      - export NEXTPATCHVER="${TAGNAME##*.}"
+      - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
+      - export ARTIFACTFILE="workflow"
+      - printenv
   pre_build:
     commands:
-      - MANIFESTVER=$(grep "version = " $WFDIR/nextflow.config | cut -d\' -f2)
-      - MAJORV=$(echo ${MANIFESTVER} | cut -d. -f1)
-      - MINORV=$(echo ${MANIFESTVER} | cut -d. -f2)
-      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
-      - export CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
-      - git config --global user.email "CodeBuild@example.com"
-      - git config --global user.name "CodeBuild"
       
       # stage testing parameter files
       - cd $WFDIR
@@ -59,11 +64,6 @@ phases:
     commands:
       - cd $WFDIR
       - bash -x $SCRIPTDIR/import_images.sh
-      - export LASTPATCHVER=$($SCRIPTDIR/get_last_patch.sh)
-      - export TAGNAME=$($SCRIPTDIR/get_next_tag_name.sh ${LASTPATCHVER})
-      - export NEXTPATCHVER="${TAGNAME##*.}"
-      - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
-      - export ARTIFACTFILE="workflow"
       
       - zip -r ${ARTIFACTS_DIR}/${ARTIFACTFILE}.zip ./* -x $BUILD_DIR_NAME/**\* ./work/**\* ./null/**\*
       - aws s3 cp ${ARTIFACTS_DIR}/${ARTIFACTFILE}.zip ${STAGING_URI}/${ARTIFACTFILE}.zip
