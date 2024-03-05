@@ -1,12 +1,10 @@
 #!/bin/bash
+set -euxo pipefail
 
 # patch version from arguments
 NEXTPATCHVER=$1
 
 echo "Tagging commit with ${NEXTPATCHVER}"
-
-# Get script directory
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Get current branch name
 CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
