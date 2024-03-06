@@ -15,7 +15,7 @@ The steps involved are generally the same across all organizations:
 
 The steps above are conceptually no different that those taken for other software products. The primary difference is the time scale involved. Workflow run times are dependent on the size of input data used, and test driven iteration times can be on the order of hours. Optimizing iteration times is out of scope for this solution. 
 
-**Features provided by this solution:**
+**Features provided by this solution include:**
 * Release process and notification  
 * Semantic Versioning  
 * Cross Account deployments  
