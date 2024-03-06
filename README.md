@@ -15,7 +15,7 @@
   - [Deployment Validation](#deployment-validation)
   - [Running the Guidance](#running-the-guidance)
   - [Next Steps](#next-steps)
-  - [Cleanup (required)](#cleanup-required)
+  - [Cleanup](#cleanup)
   - [FAQ, known issues, additional considerations, and limitations (optional)](#faq-known-issues-additional-considerations-and-limitations-optional)
     - [Additional considerations](#additional-considerations)
     - [Semantic versioning](#semantic-versioning)
@@ -283,15 +283,6 @@ aws cloudformation describe-stacks --profile prod --query 'Stacks[?starts_with(S
 
 ## Running the Guidance
 
-<Provide instructions to run the Guidance with the sample data or input provided, and interpret the output received.> 
-
-This section should include:
-
-* Guidance inputs
-* Commands to run
-* Expected output (provide screenshot if possible)
-* Output description
-
 To demonstrate running this CI/CD guidance you can use the [NF-Core/FASTQC example-workflow](https://github.com/aws-samples/amazon-omics-tutorials/tree/main/example-workflows/nf-core/workflows/fastqc) available via the [AWS HealthOmics Tutorials](https://github.com/aws-samples/amazon-omics-tutorials) repository. To do this:
 
 1. Add the `nf-core-fastqc` workflow to the deployment configuration.
@@ -370,10 +361,7 @@ To demonstrate running this CI/CD guidance you can use the [NF-Core/FASTQC examp
 This guidance uses AWS CodeCommit for source code repositories. If needed you can replace the source repository with your own (e.g. Github, Bitbucket and Gitlab). To learn more about how to do this see [CodeStartSourceConnection action](https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodestarConnectionSource.html) details in the [AWS CodePipeline documentation](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html).
 
 
-## Cleanup (required)
-
-- Include detailed instructions, commands, and console actions to delete the deployed Guidance.
-- If the Guidance requires manual deletion of resources, such as the content of an S3 bucket, please specify.
+## Cleanup
 
 To remove resources created when deploying this guidance run:
 ```bash
