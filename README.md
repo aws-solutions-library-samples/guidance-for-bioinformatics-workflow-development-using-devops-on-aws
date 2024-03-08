@@ -441,16 +441,16 @@ Resource tags on workflows encode the following:
 
 ### Branching strategies
 
-Two of the most well known approaches are trunk-based and GitFlow. Both are quite different and have their own implications.
+Two well known approaches are trunk-based and GitFlow. Both are quite different and have their own implications.
 
-This Guidance is implemented using trunk-based branching.
+This solution leverages trunk-based branching.
 
 #### Trunk-based  
 Trunk-based development is a version control management practice where developers merge small, frequent updates to a core “trunk” or `main` branch. It streamlines merging and integration phases, and from [this blog](https://aws.amazon.com/blogs/devops/multi-branch-codepipeline-strategy-with-event-driven-architecture/):
 
 > ... trunk-based \[development\] is, by far, the best strategy for taking full advantage of a DevOps approach; this is the branching strategy that AWS recommends to its customers.
 
-It is similar to [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow), with the caveat that only `main` branch is subject to automated build, test and deploy. Similarly, since automation (and potentially deployment to production) is triggered with each new commit, conditions based on git tags are implemented to control when a production release is made.
+It is similar to [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow), with the caveat that only the `main` branch is subject to automated build, test and deploy. Similarly, since automation (and potentially deployment to production) is triggered with each new commit, conditions based on git tags are implemented to control when a production release is made.
 
 #### Gitflow
 GitFlow is a branching model designed around the project release and provides a robust framework for managing larger projects.
