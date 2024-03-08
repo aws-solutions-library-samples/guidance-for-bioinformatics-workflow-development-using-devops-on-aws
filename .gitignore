@@ -11,3 +11,4 @@ cdk.out
 package-lock.json
 node_modules
 project
+cdk.json.dev

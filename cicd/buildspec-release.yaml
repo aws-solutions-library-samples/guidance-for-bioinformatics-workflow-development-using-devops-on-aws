@@ -11,7 +11,14 @@ phases:
       python: 3.11
     commands:
       - export BASEDIR="${CODEBUILD_SRC_DIR}"
-      - export PATH=$PATH:$BASEDIR 
+      - export PATH=$PATH:$BASEDIR
+      - export SCRIPTDIR="${BASEDIR}/scripts"
+      - mkdir -p $SCRIPTDIR
+      - export CICD_SCRIPTS_S3DIR="s3://${DEPLOYBUCKET}/cicd_scripts/"
+      - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
+      - chmod +x $SCRIPTDIR/*.sh
+      - bash -x $SCRIPTDIR/buildenv_setup.sh $BASEDIR
+      - export WFDIR="${CODEBUILD_SRC_DIR}"
   pre_build:
     commands:
       - export ARTIFACTURI="s3://${artifactBucket}/${artifactKey}"
@@ -30,6 +37,7 @@ phases:
     commands:
       - echo "importing images..."
       - mkdir -p $BASEDIR/workflow
+      - echo "Artifact URI:${ARTIFACTURI}"
       - aws s3 cp $ARTIFACTURI $BASEDIR/workflow
       - aws s3 cp $ARTIFACTFOLDER/parameter-template.json $BASEDIR/workflow
       - aws s3 cp $ARTIFACTFOLDER/container_pull_manifest.json $BASEDIR/workflow      

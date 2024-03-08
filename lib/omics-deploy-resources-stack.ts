@@ -1,13 +1,12 @@
-import { CfnParameter, Duration, Stack, StackProps, RemovalPolicy, triggers } from 'aws-cdk-lib';
+import { Duration, Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as kms from 'aws-cdk-lib/aws-kms';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { DeployEnvironment } from "../types";
-
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 
 // extend the props of the stack by adding some params
 export interface OmicsDeployResourcesProps extends StackProps {
@@ -27,6 +26,19 @@ export class OmicsDeployResourcesStack extends Stack {
 
     //// IAM Resources
     // IAM Policies
+    // IAM Custom Policies
+    const cdkDeployPolicy = new iam.PolicyDocument({
+      statements: [new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'sts:AssumeRole',
+          'iam:PassRole',
+        ],
+        resources: [
+          `arn:aws:iam::*:role/cdk-*`
+        ]
+      })],
+    });
 
     const stepFunctCallPolicy = new iam.PolicyDocument({
       statements: [new iam.PolicyStatement({
@@ -66,7 +78,8 @@ export class OmicsDeployResourcesStack extends Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonSSMReadOnlyAccess"),
       ],
       inlinePolicies: {       
-        StepFunctionCallPolicy: stepFunctCallPolicy
+        StepFunctionCallPolicy: stepFunctCallPolicy,
+        CdkDeployPolicy: cdkDeployPolicy
       },
     });
 
@@ -121,7 +134,14 @@ export class OmicsDeployResourcesStack extends Stack {
     this.deployBucket.grantReadWrite(cicdPipelineRole);
     this.deployBucket.grantRead(runReleaseBuildLambdaRole);
 
-    
+    // Deploy CICD scripts to the deployment bucket 
+    const s3ExtDeploy = new s3deploy.BucketDeployment(this, 'UploadCiCdScriptsExt', {
+      sources: [s3deploy.Source.asset('cicd/scripts/')],
+      destinationBucket: this.deployBucket,
+      destinationKeyPrefix: 'cicd_scripts/',
+      retainOnDelete: false
+    });
+
     //// CodeBuild Projects
     // Build Project
     const releaseProject = new codebuild.Project(this, 'releaseProject', {
@@ -131,6 +151,7 @@ export class OmicsDeployResourcesStack extends Stack {
       environmentVariables: {
         WFNAME: { value: props.workflowName },
         ACCOUNT_ID: { value: this.account },
+        DEPLOYBUCKET: { value: this.deployBucket.bucketName }
       },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),

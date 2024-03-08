@@ -164,7 +164,7 @@ export class OmicsCommonCicdStack extends Stack {
     });
 
     //// S3 Buckets
-    // Bucket for testing files, etc.
+    // Bucket for testing files, etc. in CICD account
     const testFilesBucket = new s3.Bucket(this, 'testFilesBucket', {
       bucketName: `test-files-omics-cicd-${this.account}-${this.region}`,
       removalPolicy: RemovalPolicy.DESTROY, //change if you want to retain the bucket
@@ -177,14 +177,13 @@ export class OmicsCommonCicdStack extends Stack {
     testFilesBucket.grantReadWrite(codeBuildRole);
     testFilesBucket.grantReadWrite(codePipelineRole);
 
-    // Deploy CICD scripts to this bucket
+    // Deploy CICD scripts to this bucket in CICD account
     const s3Deploy = new s3deploy.BucketDeployment(this, 'UploadCiCdScripts', {
       sources: [s3deploy.Source.asset('cicd/scripts/')],
       destinationBucket: testFilesBucket,
       destinationKeyPrefix: 'cicd_scripts/',
       retainOnDelete: false
     });
-
     
 
     // Dynamic Tests Project
