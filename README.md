@@ -364,6 +364,7 @@ To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC exa
     ```
 
 7. Review the build and testing stages.
+    
     Pushing the workflow source to CodeCommit will trigger the CodePipeline pipeline for the workflow to run, which should proceed through Source, Build, and Test stages, pausing at Approval.
 
     ![](./assets/images/codepipeline-execution-example.png)
@@ -373,8 +374,11 @@ To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC exa
     - Execution details for the dynamic test in StepFunctions 
 
 8. Approve the release.
+    
     Click the **Review** button in the **Approve** action of the **Approve** stage. Select your decision (e.g. "Approve"), optionally add approval comments, and click **Submit**.
     This will transition and deploy the pipeline to your configured `prod` account.
+
+    ![](./assets/images/codepipeline-approval.png)
 
 
 ## Next Steps
