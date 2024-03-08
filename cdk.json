@@ -17,9 +17,16 @@
     ]
   },
   "context": {
+    "cicd_account": "<your AWS Account ID for CICD>",
+    "test_account": "<your AWS Account ID for TEST>",
+    "prod_account": "<your AWS Account ID for PROD>",
+    "aws_region": "<AWS REGION>",
     "workflows": {
-      "nextflow-rnaseq": "healthomics-rnaseq-v2-workflow"
+      "<WORKFLOW NAME>": "<CODE COMMIT REPO NAME in CICD account>"
     },
+    "source_data_s3_uris": [
+      ""
+    ],
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": [

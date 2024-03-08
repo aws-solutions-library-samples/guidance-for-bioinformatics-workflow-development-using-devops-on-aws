@@ -13,7 +13,7 @@
     - [Supported Regions](#supported-regions)
   - [Deployment Steps](#deployment-steps)
   - [Deployment Validation](#deployment-validation)
-  - [Running the Guidance](#running-the-guidance)
+  - [Running the Solution with an example Workflow](#running-the-solution-with-an-example-workflow)
   - [Next Steps](#next-steps)
   - [Cleanup](#cleanup)
   - [FAQ, known issues, additional considerations, and limitations (optional)](#faq-known-issues-additional-considerations-and-limitations-optional)
@@ -29,11 +29,15 @@
 
 ## Overview
 
-Secondary analysis pipelines in omics are software, and like any other software product they have versions that need to be tracked, tested, and released when ready for wider use. This also applies to [AWS HealthOmics](https://aws.amazon.com/healthomics/) workflows.  Building, testing, and deploying new workflow versions is undifferentiated heavy lift. This solution makes the cloud resources for automated testing and deployment of secondary analysis (and other bioinformatics) pipelines easy to acquire, provision, and use.
+Bioinformatics workflows for omics are software, and like any other software product they have source control and versions that need to be tracked, tested, and released when ready for wider use. This also applies to workflows used with [AWS HealthOmics](https://aws.amazon.com/healthomics/) workflows.  Building, testing, and deploying new workflow versions is undifferentiated heavy lift. This solution makes the cloud resources for automated testing and deployment of bioinformatics workflows easy to acquire, provision, and use.
+
+> **NOTE:** Current version of the solution is compatible with **Nextflow** workflows only. The solution can be extended to other workflow languages supported by AWS HealthOmics (WDL and CWL) by making appropriate code changes in the build and CDK scripts.
 
 **Features provided by this solution include:**
-* Release process and notification  
-* Semantic Versioning  
+* Release process and notification
+* Automated container build or migrations from public docker registries  
+* Automated tests 
+* Semantic Versioning and automated version updates
 * Cross Account deployments  
     * secure build  
     * environment isolation  
@@ -77,7 +81,12 @@ These deployment instructions are optimized to work best on **Amazon Linux 2023*
 
 ### Additional tools
 
-During deployment this guidance will install the [Amazon ECR helper for AWS HealthOmics](https://github.com/aws-samples/amazon-ecr-helper-for-aws-healthomics) CDK application.
+Make sure you have the following tools installed:
+
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) 
+
+During deployment this guidance will install the [Amazon ECR helper for AWS HealthOmics](https://github.com/aws-samples/amazon-ecr-helper-for-aws-healthomics) CDK application to your AWS accounts to enable migration of publicly available docker images or building new docker images
 
 ### AWS account requirements
 
@@ -93,15 +102,7 @@ This guidance is best suited for regions where AWS HealthOmics is [available](ht
 
 ## Deployment Steps
 
-Deployment steps must be numbered, comprehensive, and usable to customers at any level of AWS expertise. The steps must include the precise commands to run, and describe the action it performs.
 
-* All steps must be numbered.
-* If the step requires manual actions from the AWS console, include a screenshot if possible.
-* The steps must start with the following command to clone the repo. ```git clone xxxxxxx```
-* If applicable, provide instructions to create the Python virtual environment, and installing the packages using ```requirement.txt```.
-* If applicable, provide instructions to capture the deployed resource ARN or ID using the CLI command (recommended), or console action.
-
- 
 1. Clone this repository.
     ```bash
     git clone https://github.com/aws-solutions-library-samples/guidance-for-bioinformatics-workflow-ci-cd-on-aws.git
@@ -121,6 +122,8 @@ Deployment steps must be numbered, comprehensive, and usable to customers at any
     # ... follow CLI prompts to complete
     ```
 
+    Additional documentation for profile setup is available [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html).
+
 3. Bootstrap the AWS accounts you selected with the AWS CDK.
    
    > **NOTE:** Perform the bootstrapping commands __OUTSIDE__ of the project folder, like your home folder (`~`).
@@ -131,34 +134,36 @@ Deployment steps must be numbered, comprehensive, and usable to customers at any
 
     Start by bootstrapping the `cicd` account. This is the account that will contain workflow and container source code, run tests, and deploy to other accounts.
     ```bash
-    cdk bootstrap 
-        --profile cicd 
-        aws://<CICD_AWS_ACCOUNT_ID>/<AWS_REGION> 
+    cdk bootstrap \
+        --profile cicd \
+        aws://<CICD_AWS_ACCOUNT_ID>/<AWS_REGION> \
         --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
     ```
 
     Next bootstrap the `prod` account. This account will have "released" workflows deployed into it. Thus, it need needs to have a trust relationship with the `cicd` account (that account that invokes the deployment).
     ```bash
-    cdk bootstrap 
-        --profile prod 
-        --trust <CICD ACCOUNT_ID> 
-        aws://<PROD_AWS_ACCOUNT_ID>/<AWS_REGION> 
+    cdk bootstrap \
+        --profile prod \ 
+        --trust <CICD ACCOUNT_ID> \ 
+        aws://<PROD_AWS_ACCOUNT_ID>/<AWS_REGION> \ 
         --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
     ```
 
-4. Change to the repo folder and install `npm` packages
+4. Change directory to the current repository folder and install `npm` packages
     ```bash
     cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
     npm install
     ```
 
 5. Configure the deployment
+
+    NOTE: Use the steps below as a general guidance. To try running the solution with an example workflow and test data, you can use the example provided later in the README: [Running the Solution with an example Workflow](#running-the-solution-with-an-example-workflow)
    
    1. Add the AWS accounts you will use.
 
         Edit the [cdk.json](cdk.json) file.
 
-        Add the following properties to the `context` property in the json (replace with your own values):  
+        Add the following properties to the `context` property in the json (replace with your own account IDs and AWS region):  
 
         ```json
             "cicd_account": "111122223333",
@@ -166,8 +171,8 @@ Deployment steps must be numbered, comprehensive, and usable to customers at any
             "prod_account": "777788889999",
             "aws_region": "<aws-region>",    
         ```
-
-        There are 3 deployment stages (AWS accounts) configured. The `cicd` and `test` are configured to be the same account. You can make these different accounts if needed. Just remember to bootstrap any additional accounts you use.  
+         
+        In this solution, there are 3 deployment stages (AWS accounts) configured. The `cicd` and `test` are configured to be the same account. You can make these different accounts if needed. Just remember to bootstrap any additional accounts you use. 
             
         > :warning: WARNING :warning:
         > Always remove the account numbers and emails from configuration files before sharing them publicly (e.g. pushing to a public repo).  
@@ -179,8 +184,8 @@ Deployment steps must be numbered, comprehensive, and usable to customers at any
         Examples:
         ```json
         "workflows": {
-            "nf-workflow-a": "codecommit-repo-nf-workflow-a",
-            "nf-workflow-b": "codecommit-repo-nf-workflow-b",
+            "workflow-a": "codecommit-repo-for-workflow-a",
+            "workflow-b": "codecommit-repo-for-workflow-b",
             ... 
         }
         ```
@@ -189,7 +194,8 @@ Deployment steps must be numbered, comprehensive, and usable to customers at any
 
         During deployment, the following resources are created for each workflow listed in `context.workflows`:
         - An AWS CodeBuild project to build workflow artifacts like containers
-        - An AWS CodeBuild project to deploy the workflow and artifacts to testing and production environments.
+        - An AWS CodeBuild project to deploy the workflow to AWS HealthOmics and artifacts to testing and production environments.
+        - An AWS Step Functions state machine to orchestrate an AWS HealthOmics workflow test with pre-configured test data.
         - An AWS CodePipeline pipeline to coordinate testing and deployment of the workflow
 
         The CodePipeline pipeline references a AWS CodeCommit repository by name, and will be triggered to run with any commited changes to the `main` branch therein. If this repository does not exist, you need to create it.
@@ -209,7 +215,9 @@ Deployment steps must be numbered, comprehensive, and usable to customers at any
         ]
         ```
 
-6. Deploy the guidance. The following command will deploy resources in your CI/CD, testing, and production accounts.
+6. Deploy the solution. 
+   
+   The following command will deploy resources in your CI/CD, testing, and production accounts.
    ```bash
    cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
    npx cdk deploy --profile cicd --all
@@ -281,9 +289,9 @@ In your `prod` account use:
 aws cloudformation describe-stacks --profile prod --query 'Stacks[?starts_with(StackName, `OmicsCicd`)]'
 ```
 
-## Running the Guidance
+## Running the Solution with an example Workflow 
 
-To demonstrate running this CI/CD guidance you can use the [NF-Core/FASTQC example-workflow](https://github.com/aws-samples/amazon-omics-tutorials/tree/main/example-workflows/nf-core/workflows/fastqc) available via the [AWS HealthOmics Tutorials](https://github.com/aws-samples/amazon-omics-tutorials) repository. To do this:
+To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC example-workflow](https://github.com/aws-samples/amazon-omics-tutorials/tree/main/example-workflows/nf-core/workflows/fastqc) available via the [AWS HealthOmics Tutorials](https://github.com/aws-samples/amazon-omics-tutorials) repository. To do this:
 
 1. Add the `nf-core-fastqc` workflow to the deployment configuration.
     
@@ -309,13 +317,24 @@ To demonstrate running this CI/CD guidance you can use the [NF-Core/FASTQC examp
     npx cdk deploy --profile cicd --all
     ```
 
-4. Get the workflow source and initialize a local git repository
+4. Get the example workflow source and initialize a local git repository
+
+    > NOTE: Do this in a directory other than the CI/CD solution repository directory
 
     ```bash
+    # clone AWS HealthOmics tutorials open source respoitory which includes example workflows
     git clone https://github.com/aws-samples/amazon-omics-tutorials.git
-    mkdir -p aws-healthomics-nf-core-fastqc
-    cp -Rv amazon-omics-tutorials/example-workflows/nf-core/workflows/fastqc/* aws-healthomics-nf-core-fastqc
-    cd aws-healthomics-nf-core-fastqc
+
+    # create a new directory in a new location 
+    mkdir -p ~/aws-healthomics-nf-core-fastqc
+
+    # copy one of the example workflows into the new directory
+    cp -Rv amazon-omics-tutorials/example-workflows/nf-core/workflows/fastqc/*  ~/aws-healthomics-nf-core-fastqc
+
+    # change directory to the new example workflow directory
+    cd ~/aws-healthomics-nf-core-fastqc
+
+    # initiate and commit to a new local git repository
     git init
     git add .
     git commit -m "first commit"
@@ -327,19 +346,21 @@ To demonstrate running this CI/CD guidance you can use the [NF-Core/FASTQC examp
     * `parameter-template.json`: This is an additional file that is used when deploying the workflow to AWS HealthOmics. It specifies the top level parameters your workflow takes. For more information on what this looks like see [AWS HealthOmics Documentation](https://docs.aws.amazon.com/omics/latest/dev/parameter-templates.html)
     * `test.parameters.json`: This is an additional file that is used to run end-to-end (aka "dynamic") tests of your workflow using AWS HealthOmics. It provides test values for for any required top level parameters for the workflow. Note that any S3 and ECR URIs used should be accessible by AWS HealthOmics and consistent with the region the workflow is deployed to. It can have placeholder variables of `{{region}}` and `{{staging_uri}}` which are replaced with the AWS region name the workflow is tested in, and a deployment generated staging S3 URI used for testing artifacts, respectively.
 
-5. Create a repository for the workflow in CodeCommit
+5. Create a repository for the workflow in CodeCommit in the `cicd` AWS account
 
     ```bash
     aws codecommit create-repository \
-        --repository-name aws-healthomics-nf-core-fastqc
+        --repository-name aws-healthomics-nf-core-fastqc \
+        --profile cicd
     ```
 
 6. Push the workflow source to CodeCommit
     > **NOTE:** the following commands leverage the [git-remote-codecommit](https://github.com/aws/git-remote-codecommit) package.
 
     ```bash
-    git remote add codecommit codecommit://aws-healthomics-nf-core-fastqc
-    git push -u codecommit main
+    # specify profile name as the prefix to 
+    # the repository name if it is not the default profile
+    git push codecommit://cicd@aws-healthomics-nf-core-fastqc --all
     ```
 
 7. Review the build and testing stages.
