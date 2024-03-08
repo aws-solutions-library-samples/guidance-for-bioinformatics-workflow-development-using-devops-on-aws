@@ -16,7 +16,7 @@
   - [Running the Solution with an example Workflow](#running-the-solution-with-an-example-workflow)
   - [Next Steps](#next-steps)
   - [Cleanup](#cleanup)
-  - [FAQ, known issues, additional considerations, and limitations (optional)](#faq-known-issues-additional-considerations-and-limitations-optional)
+  - [FAQ, known issues, additional considerations, and limitations](#faq-known-issues-additional-considerations-and-limitations)
     - [Additional considerations](#additional-considerations)
     - [Semantic versioning](#semantic-versioning)
     - [Branching strategies](#branching-strategies)
@@ -399,9 +399,9 @@ npx cdk destroy --profile cicd --all
 - [AWS HealthOmics: Deleting workflows and runs](https://docs.aws.amazon.com/omics/latest/dev/deleting-workflows-and-runs.html)
 - [Amazon S3: Deleting a bucket](https://docs.aws.amazon.com/AmazonS3/latest/userguide/delete-bucket.html)
 
-## FAQ, known issues, additional considerations, and limitations (optional)
+## FAQ, known issues, additional considerations, and limitations
 
-*“For any feedback, questions, or suggestions, please use the issues tab under this repo.”*
+*For any feedback, questions, or suggestions, please use the issues tab under this repo.*
 
 ### Additional considerations
 
