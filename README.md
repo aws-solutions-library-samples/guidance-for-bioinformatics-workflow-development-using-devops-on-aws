@@ -84,7 +84,8 @@ These deployment instructions are optimized to work best on **Amazon Linux 2023*
 Make sure you have the following tools installed:
 
 - [AWS CLI](https://aws.amazon.com/cli/)
-- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) 
+- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)
+- (Recommended) [Git Remote CodeCommit](https://pypi.org/project/git-remote-codecommit/)
 
 During deployment this guidance will install the [Amazon ECR helper for AWS HealthOmics](https://github.com/aws-samples/amazon-ecr-helper-for-aws-healthomics) CDK application to your AWS accounts to enable migration of publicly available docker images or building new docker images
 
@@ -291,62 +292,11 @@ aws cloudformation describe-stacks --profile prod --query 'Stacks[?starts_with(S
 
 ## Running the Solution with an example Workflow 
 
-To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC example-workflow](https://github.com/aws-samples/amazon-omics-tutorials/tree/main/example-workflows/nf-core/workflows/fastqc) available via the [AWS HealthOmics Tutorials](https://github.com/aws-samples/amazon-omics-tutorials) repository. To do this:
+To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC example-workflow](https://github.com/aws-samples/amazon-omics-tutorials/tree/main/example-workflows/nf-core/workflows/fastqc) available via the [AWS HealthOmics Tutorials](https://github.com/aws-samples/amazon-omics-tutorials) repository.
 
-1. Add the `nf-core-fastqc` workflow to the deployment configuration.
-    
-    Edit the `context.workflows` property in the [cdk.json](cdk.json) file to be like:
-    ```json
-    "workflows": {
-        "nf-core-fastqc": "aws-healthomics-nf-core-fastqc"
-    }
-    ```
+The following instructions assume you have cloned the solution repository to your `$HOME` folder on a Linux based OS (typically located at `~`).
 
-2. Add read-only access to the publicly accessible `aws-genomics-static-*` buckets available in all HealthOmics supported AWS regions.
-
-    Edit the `context.source_data_s3_uris` property in the [cdk.json](cdk.json) to be like:
-    ```json
-    "source_data_s3_uris": [
-        "s3://aws-genomics-static-*/*"
-    ]
-    ```
-
-3. (Re)deploy the guidance by running:
-    ```bash
-    cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
-    npx cdk deploy --profile cicd --all
-    ```
-
-4. Get the example workflow source and initialize a local git repository
-
-    > NOTE: Do this in a directory other than the CI/CD solution repository directory
-
-    ```bash
-    # clone AWS HealthOmics tutorials open source respoitory which includes example workflows
-    git clone https://github.com/aws-samples/amazon-omics-tutorials.git
-
-    # create a new directory in a new location 
-    mkdir -p ~/aws-healthomics-nf-core-fastqc
-
-    # copy one of the example workflows into the new directory
-    cp -Rv amazon-omics-tutorials/example-workflows/nf-core/workflows/fastqc/*  ~/aws-healthomics-nf-core-fastqc
-
-    # change directory to the new example workflow directory
-    cd ~/aws-healthomics-nf-core-fastqc
-
-    # initiate and commit to a new local git repository
-    git init
-    git add .
-    git commit -m "first commit"
-    ```
-
-    Pay special attention to these files inside your workflow repository:
-
-    * `nextflow.config`: Update your pipeline version and name in the `manifest` scope to be compatible with semantic versioning (see [Semantic versioning](#semantic-versioning)).  
-    * `parameter-template.json`: This is an additional file that is used when deploying the workflow to AWS HealthOmics. It specifies the top level parameters your workflow takes. For more information on what this looks like see [AWS HealthOmics Documentation](https://docs.aws.amazon.com/omics/latest/dev/parameter-templates.html)
-    * `test.parameters.json`: This is an additional file that is used to run end-to-end (aka "dynamic") tests of your workflow using AWS HealthOmics. It provides test values for for any required top level parameters for the workflow. Note that any S3 and ECR URIs used should be accessible by AWS HealthOmics and consistent with the region the workflow is deployed to. It can have placeholder variables of `{{region}}` and `{{staging_uri}}` which are replaced with the AWS region name the workflow is tested in, and a deployment generated staging S3 URI used for testing artifacts, respectively.
-
-5. Create a repository for the workflow in CodeCommit in the `cicd` AWS account
+1. Create a repository for the workflow in CodeCommit in the `cicd` AWS account
 
     ```bash
     aws codecommit create-repository \
@@ -354,16 +304,90 @@ To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC exa
         --profile cicd
     ```
 
-6. Push the workflow source to CodeCommit
-    > **NOTE:** the following commands leverage the [git-remote-codecommit](https://github.com/aws/git-remote-codecommit) package.
+2. Clone the CodeCommit repository locally.
+
+   > **NOTE:** Do this outside of the solution repo, like in your home (`~`) folder. The command below uses the [git-remote-codecommit](https://github.com/aws/git-remote-codecommit) package which simplifies accessing CodeCommit repositories.
+   
+   ```bash
+   cd ~
+   git clone codecommit://cicd@aws-healthomics-nf-core-fastqc
+   ```
+
+   This should create a local git repo at: `~/aws-healthomics-nf-core-fastqc`
+
+3. Get the example workflow from AWS HealthOmics tutorials.
+   
+   > **NOTE**: Do this in a directory other than the CI/CD solution repository directory
 
     ```bash
-    # specify profile name as the prefix to 
-    # the repository name if it is not the default profile
-    git push codecommit://cicd@aws-healthomics-nf-core-fastqc --all
+    cd ~
+    
+    # clone AWS HealthOmics tutorials open source respoitory which includes example workflows
+    git clone https://github.com/aws-samples/amazon-omics-tutorials.git
+
+    # copy one of the example workflows into the new directory
+    cp -Rv ~/amazon-omics-tutorials/example-workflows/nf-core/workflows/fastqc/*  ~/aws-healthomics-nf-core-fastqc
+
+    # change directory to the example workflow directory
+    cd ~/aws-healthomics-nf-core-fastqc
     ```
 
-7. Review the build and testing stages.
+    Pay special attention to these files inside your workflow repository:
+
+    * `nextflow.config`: Update your pipeline version and name in the `manifest` scope to be compatible with semantic versioning (see [Semantic versioning](#semantic-versioning)).  
+    * `parameter-template.json`: This is an additional file that is used when deploying the workflow to AWS HealthOmics. It specifies the top level parameters your workflow takes. For more information on what this looks like see [AWS HealthOmics Documentation](https://docs.aws.amazon.com/omics/latest/dev/parameter-templates.html)
+    * `test.parameters.json`: This is an additional file that is used to run end-to-end (aka "dynamic") tests of your workflow using AWS HealthOmics. It provides test values for for any required top level parameters for the workflow. Note that any S3 and ECR URIs used should be accessible by AWS HealthOmics and consistent with the region the workflow is deployed to. It can have placeholder variables of `{{region}}` and `{{staging_uri}}` which are replaced with the AWS region name the workflow is tested in, and a deployment generated staging S3 URI used for testing artifacts, respectively.
+  
+    If you updated any files save them.
+
+    ```bash
+    # commit the copied / modified files to example workflow git repository
+    git add .
+    git commit -m "first commit"
+    ```
+
+4. Configure the solution deployment.
+
+    Change to the local solution repository:
+    ```bash
+    cd ~/guidance-for-bioinformatics-workflow-ci-cd-on-aws
+    ```
+
+    Then ...
+   
+   1. Add the `nf-core-fastqc` workflow to the deployment configuration.
+       
+       Edit the `context.workflows` property in the [cdk.json](cdk.json) file to be like:
+       ```json
+       "workflows": {
+           "nf-core-fastqc": "aws-healthomics-nf-core-fastqc"
+       }
+       ```
+
+   2. Add read-only access to the publicly accessible `aws-genomics-static-*` buckets available in all AWS regions where AWS HealthOmics is available.
+
+       Edit the `context.source_data_s3_uris` property in the [cdk.json](cdk.json) to be like:
+       ```json
+       "source_data_s3_uris": [
+           "s3://aws-genomics-static-*/*"
+       ]
+       ```
+
+5. (Re)deploy the guidance.
+    
+    ```bash
+    cd ~/guidance-for-bioinformatics-workflow-ci-cd-on-aws
+    npx cdk deploy --profile cicd --all
+    ```
+
+6. Push the example workflow source to CodeCommit.
+    
+    ```bash
+    cd ~/aws-healthomics-nf-core-fastqc
+    git push -u codecommit main
+    ```
+
+7.  Review the build and testing stages via the [AWS CodePipeline Console](https://console.aws.amazon.com/codesuite/codepipeline/pipelines).
     
     Pushing the workflow source to CodeCommit will trigger the CodePipeline pipeline for the workflow to run, which should proceed through Source, Build, and Test stages, pausing at Approval.
 
@@ -373,7 +397,7 @@ To demonstrate running this CI/CD solution users can use the [NF-Core/FASTQC exa
     - Logs for the CodeBuild project
     - Execution details for the dynamic test in StepFunctions 
 
-8. Approve the release.
+8.  Approve the release.
     
     Click the **Review** button in the **Approve** action of the **Approve** stage. Select your decision (e.g. "Approve"), optionally add approval comments, and click **Submit**.
     This will transition and deploy the pipeline to your configured `prod` account.
