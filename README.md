@@ -34,7 +34,6 @@ Bioinformatics workflows for omics are software, and like any other software pro
 > **NOTE:** Current version of the solution is compatible with **Nextflow** workflows only. The solution can be extended to other workflow languages supported by AWS HealthOmics (WDL and CWL) by making appropriate code changes in the build and CDK scripts.
 
 **Features provided by this solution include:**
-* Release process and notification
 * Automated container build or migrations from public docker registries  
 * Automated tests 
 * Semantic Versioning and automated version updates
@@ -176,7 +175,7 @@ This guidance is best suited for regions where AWS HealthOmics is [available](ht
         In this solution, there are 3 deployment stages (AWS accounts) configured. The `cicd` and `test` are configured to be the same account. You can make these different accounts if needed. Just remember to bootstrap any additional accounts you use. 
             
         > :warning: WARNING :warning:
-        > Always remove the account numbers and emails from configuration files before sharing them publicly (e.g. pushing to a public repo).  
+        > Always remove sensitive information like account numbers from configuration files before sharing them publicly (e.g. pushing to a public repo).  
    
    2. Add workflow source repositories
         
@@ -334,9 +333,11 @@ The following instructions assume you have cloned the solution repository to you
 
     Pay special attention to these files inside your workflow repository:
 
-    * `nextflow.config`: Update your pipeline version and name in the `manifest` scope to be compatible with semantic versioning (see [Semantic versioning](#semantic-versioning)).  
+    * `nextflow.config`: Update your pipeline version and name in the [`manifest` scope](https://www.nextflow.io/docs/latest/config.html#scope-manifest) to be compatible with semantic versioning (see [Semantic versioning](#semantic-versioning)).  
     * `parameter-template.json`: This is an additional file that is used when deploying the workflow to AWS HealthOmics. It specifies the top level parameters your workflow takes. For more information on what this looks like see [AWS HealthOmics Documentation](https://docs.aws.amazon.com/omics/latest/dev/parameter-templates.html)
     * `test.parameters.json`: This is an additional file that is used to run end-to-end (aka "dynamic") tests of your workflow using AWS HealthOmics. It provides test values for for any required top level parameters for the workflow. Note that any S3 and ECR URIs used should be accessible by AWS HealthOmics and consistent with the region the workflow is deployed to. It can have placeholder variables of `{{region}}` and `{{staging_uri}}` which are replaced with the AWS region name the workflow is tested in, and a deployment generated staging S3 URI used for testing artifacts, respectively.
+
+        :warning: **NOTE** :warning: This solution creates and stages a file named `samplesheet.csv` that is used as a workflow input specific to this example workflow. Make sure you update the `input` property in `test.parameters.json` accordingly.
   
     If you updated any files save them.
 
@@ -390,6 +391,8 @@ The following instructions assume you have cloned the solution repository to you
 7.  Review the build and testing stages via the [AWS CodePipeline Console](https://console.aws.amazon.com/codesuite/codepipeline/pipelines).
     
     Pushing the workflow source to CodeCommit will trigger the CodePipeline pipeline for the workflow to run, which should proceed through Source, Build, and Test stages, pausing at Approval.
+
+    > **NOTE**: The dynamic testing stage runs the workflow in AWS HealthOmics using test data. This typically takes 50-60min to complete for this specific example workflow. Testing time will vary if using other test data with this workflow or other example workflows.
 
     ![](./assets/images/codepipeline-execution-example.png)
 
