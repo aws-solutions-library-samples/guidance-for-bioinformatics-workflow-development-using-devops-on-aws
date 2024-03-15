@@ -11,7 +11,7 @@ phases:
       python: 3.11
     commands:
       - export BUILD_DIR_NAME="build"
-      - export BASEDIR="${CODEBUILD_SRC_DIR}/$BUILD_DIR_NAME"
+      - export BASEDIR="${CODEBUILD_GOPATH}/$BUILD_DIR_NAME"
       - export PATH=$PATH:$BASEDIR 
       - export WFDIR="${CODEBUILD_SRC_DIR}"
       - export ARTIFACTS_DIR="${BASEDIR}/artifacts"
@@ -40,35 +40,38 @@ phases:
       - printenv
   pre_build:
     commands:
-      
       # stage testing parameter files
       - cd $WFDIR
       # add an 'ecr_registry' parameter to the test.parameters.json file, and substitute placeholders
       # this is expected by example workflows in amazon-omics-tutorials
-      - TEST_PARAMS=$(jq '. + {"ecr_registry":$ecr_registry}' ./test.parameters.json --arg ecr_registry $ECR_REGISTRY)
-      - echo $TEST_PARAMS > ./test.parameters.json
+      - if [ $(jq 'has("ecr_registry")' ./parameter-template.json) ==  true ];
+          then echo "ecr_registry parameter found";
+          TEST_PARAMS=$(jq '. + {"ecr_registry":$ecr_registry}' ./test.parameters.json --arg ecr_registry $ECR_REGISTRY);
+          echo $TEST_PARAMS > ./test.parameters.json;
+        fi
       - sed -i'.bak' "s|{{staging_uri}}|$STAGING_URI|g" ./test.parameters.json
       - sed -i'.bak' "s|{{region}}|$AWS_REGION|g" ./test.parameters.json
       - aws s3 cp ./test.parameters.json ${STAGING_URI}/test.parameters.json
       - cat ./test.parameters.json
       
       # these commands are specific to nf-core style nextflow workflows which use samplesheet.csv files
-      - sed "s|{{region}}|$AWS_REGION|g" ./samplesheet-template.csv > ./samplesheet.csv
-      - aws s3 cp ./samplesheet.csv ${STAGING_URI}/samplesheet.csv
-      - cat ./samplesheet.csv
-
+      - echo "Check if samplesheet based workflow and render template"
+      - if [ -f ./samplesheet-template.csv ]; 
+          then echo "samplesheet.csv found"; 
+          sed "s|{{region}}|$AWS_REGION|g" ./samplesheet-template.csv > ./samplesheet.csv;
+          aws s3 cp ./samplesheet.csv ${STAGING_URI}/samplesheet.csv;
+        fi  
       - echo "Verifying workflow definition is correct..."
       - $BASEDIR/bin/nextflow -c ./nextflow.config run -preview ./main.nf -params-file ./test.parameters.json
       - cat .nextflow.log
   build:
     commands:
-      - cd $WFDIR
       - bash -x $SCRIPTDIR/import_images.sh
-      
       - zip -r ${ARTIFACTS_DIR}/${ARTIFACTFILE}.zip ./* -x $BUILD_DIR_NAME/**\* ./work/**\* ./null/**\*
       - aws s3 cp ${ARTIFACTS_DIR}/${ARTIFACTFILE}.zip ${STAGING_URI}/${ARTIFACTFILE}.zip
       - cp $WFDIR/parameter-template.json ${ARTIFACTS_DIR}
       - cp $WFDIR/container_pull_manifest.json ${ARTIFACTS_DIR}
+      - cat $WFDIR/container_pull_manifest.json
       - cp $WFDIR/test.parameters.json ${ARTIFACTS_DIR}
 
       - cd ${ARTIFACTS_DIR}

@@ -14,13 +14,14 @@ fi
 
 # Look for public image references in workflow, generate manifests
 cd $WFDIR
+ls -lah 
 mkdir -p $WFDIR/conf
 python3 $BASEDIR/amazon-omics-tutorials/utils/scripts/inspect_nf.py \
     $REGISTRY_NAMESPACE \
     $SUBSTITUTIONS \
     --output-config-file $WFDIR/conf/omics-images.config \
     --output-manifest-file $WFDIR/container_pull_manifest.json \
-    .
+    $WFDIR
 # Use helper to upload images to ECR
 aws stepfunctions start-execution \
     --state-machine-arn arn:aws:states:${AWS_REGION}:${ACCOUNT_ID}:stateMachine:omx-container-puller \

@@ -139,7 +139,7 @@ export class OmicsDeployResourcesStack extends Stack {
       sources: [s3deploy.Source.asset('cicd/scripts/')],
       destinationBucket: this.deployBucket,
       destinationKeyPrefix: 'cicd_scripts/',
-      retainOnDelete: false
+      retainOnDelete: true
     });
 
     //// CodeBuild Projects
