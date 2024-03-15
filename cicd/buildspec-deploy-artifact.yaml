@@ -36,3 +36,7 @@ phases:
       - echo "Copying artifacts to target bucket ${DEPLOYBUCKET}"
       - cd $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action
       - for FILE in *; do aws s3 cp ${FILE} s3://${DEPLOYBUCKET}/${DEPLOYPATH}/${FILE} ; done
+      - echo "Update ECR repository policy to allow DEPLOY account to access images"
+      - mkdir -p $CODEBUILD_SRC_DIR/tmp
+      - unzip workflow.zip -d $CODEBUILD_SRC_DIR/tmp
+      - python3 $SCRIPTDIR/set_repository_policy.py --omics_config $CODEBUILD_SRC_DIR/tmp/conf/omics-images.config $ACCOUNT_ID

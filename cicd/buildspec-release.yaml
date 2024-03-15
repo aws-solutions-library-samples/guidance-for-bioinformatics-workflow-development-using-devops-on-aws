@@ -17,7 +17,6 @@ phases:
       - export CICD_SCRIPTS_S3DIR="s3://${DEPLOYBUCKET}/cicd_scripts/"
       - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
       - chmod +x $SCRIPTDIR/*.sh
-      - bash -x $SCRIPTDIR/buildenv_setup.sh $BASEDIR
       - export WFDIR="${CODEBUILD_SRC_DIR}"
   pre_build:
     commands:
@@ -35,21 +34,12 @@ phases:
       - git config --global user.name "CodeBuild"
   build:
     commands:
-      - echo "importing images..."
       - mkdir -p $BASEDIR/workflow
       - echo "Artifact URI:${ARTIFACTURI}"
       - aws s3 cp $ARTIFACTURI $BASEDIR/workflow
       - aws s3 cp $ARTIFACTFOLDER/parameter-template.json $BASEDIR/workflow
       - aws s3 cp $ARTIFACTFOLDER/container_pull_manifest.json $BASEDIR/workflow      
-      - aws stepfunctions start-execution --state-machine-arn arn:aws:states:${AWS_REGION}:${ACCOUNT_ID}:stateMachine:omx-container-puller --input file://${BASEDIR}/workflow/container_pull_manifest.json
-      - echo Updating images config in artifact to point this accounts registry
       - cd $BASEDIR/workflow
-      - mkdir -p $BASEDIR/workflow/conf
-      - unzip -p workflow.zip conf/omics-images.config >$BASEDIR/workflow/conf/omics-images.config
-      - sed -i s/${cicdACCOUNT}/${ACCOUNT_ID}/g conf/omics-images.config
-      - echo "Modified images reference:"
-      - cat conf/omics-images.config
-      - zip -ur workflow.zip conf
       - echo "Creating Workflow..."
       - echo "You might want to delete previous versions of this workflow"
       - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://${BASEDIR}/workflow/${ARTIFACTFILE}.zip --parameter-template file://${BASEDIR}/workflow/parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$PATCHV)
