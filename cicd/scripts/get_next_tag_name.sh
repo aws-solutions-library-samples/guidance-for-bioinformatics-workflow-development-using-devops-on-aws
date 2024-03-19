@@ -3,10 +3,13 @@
 # BUILD version from arguments
 # Get current branch name
 CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
-LASTAG=$(git tag --merged ${CURRBRANCH})
+# Get list of tags for current branch and defined version
+LASTAG=$(git tag -l ${CURRBRANCH}-${MANIFESTVER}\* --merged ${CURRBRANCH} | sort -n)
+# No tags found, then set build version to 0
 if [ -z ${LASTAG} ]
 then
       LASTBUILDVER=0
+# If there are tags, then get build version from last tag
 else
       LASTBUILDVER="${LASTAG##*.}"
 fi
