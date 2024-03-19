@@ -20,7 +20,7 @@ phases:
       - export WFARN=$(jq -r .arn $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export workflow_major_version=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export workflow_minor_version=$(jq -r .tags.MINOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
-      - export NEXTPATCHVER=$(jq -r .tags.PATCH_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
+      - export NEXTBUILDVER=$(jq -r .tags.BUILD_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
   pre_build:
     commands:
       - git config --global user.email "CodeBuild@example.com"
