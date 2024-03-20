@@ -10,8 +10,7 @@ phases:
     commands:
       - export BUILD_DIR_NAME="build"
       - export BASEDIR="${CODEBUILD_SRC_DIR}/$BUILD_DIR_NAME"
-      - export WFDIR="${CODEBUILD_SRC_DIR}"
-      
+      - export WFDIR="${CODEBUILD_SRC_DIR}"      
       - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
       - export SCRIPTDIR="${BASEDIR}/scripts"
       - mkdir -p $SCRIPTDIR
@@ -25,18 +24,19 @@ phases:
       - export MAJORV=$(jq -r .tags.MAJOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export MINORV=$(jq -r .tags.MINOR_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
       - export PATCHV=$(jq -r .tags.PATCH_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)
-      - export DEPLOYPATH="artifacts/nextflow/${WFNAME}/${BRANCH}/v${MAJORV}.${MINORV}.${PATCHV}"
+      - export BUILDV=$(jq -r .tags.BUILD_VERSION $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.json)      
+      - export DEPLOYPATH="artifacts/nextflow/${WFNAME}/${BRANCH}/v${MAJORV}.${MINORV}.${PATCHV}.${BUILDV}"
       - git config --global user.email "CodeBuild@example.com"
       - git config --global user.name "CodeBuild"
       - printenv
   build:
     commands:
-      - echo "Tagging commit..."
-      - $SCRIPTDIR/tag_commit.sh $PATCHV
       - echo "Update ECR repository policy to allow DEPLOY account to access images"
       - mkdir -p $CODEBUILD_SRC_DIR/tmp
       - unzip workflow.zip -d $CODEBUILD_SRC_DIR/tmp
       - python3 $SCRIPTDIR/set_repository_policy.py --omics_config $CODEBUILD_SRC_DIR/tmp/conf/omics-images.config $DEPLOY_ACCOUNT_ID
+      - echo "Tagging commit..."
+      - $SCRIPTDIR/tag_commit.sh $BUILDV
       - echo "Copying artifacts to target bucket ${DEPLOYBUCKET}"
       - cd $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action
       - for FILE in *; do aws s3 cp ${FILE} s3://${DEPLOYBUCKET}/${DEPLOYPATH}/${FILE} ; done

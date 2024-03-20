@@ -19,9 +19,6 @@ phases:
       - export SCRIPTDIR="${BASEDIR}/scripts"
       - export STAGING_URI="s3://${TESTBUCKET}/${WFNAME}/staging/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
       - export ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-      - export MANIFESTVER=$(grep -E "\s+version\s+=\s*'.*?'" $WFDIR/nextflow.config | cut -d\' -f2)
-      - export MAJORV=$(echo ${MANIFESTVER} | cut -d. -f1)
-      - export MINORV=$(echo ${MANIFESTVER} | cut -d. -f2)
       - export CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
       - git config --global user.email "CodeBuild@example.com"
@@ -32,9 +29,9 @@ phases:
       - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive
       - chmod +x $SCRIPTDIR/*.sh
       - bash -x $SCRIPTDIR/buildenv_setup.sh $BASEDIR
-      - export LASTPATCHVER=$($SCRIPTDIR/get_last_patch.sh)
-      - export TAGNAME=$($SCRIPTDIR/get_next_tag_name.sh ${LASTPATCHVER})
-      - export NEXTPATCHVER="${TAGNAME##*.}"
+      - . $SCRIPTDIR/set_version.sh
+      - export TAGNAME=$($SCRIPTDIR/get_next_tag_name.sh)
+      - export NEXTBUILDVER="${TAGNAME##*.}"
       - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
       - export ARTIFACTFILE="workflow"
       - printenv
@@ -76,7 +73,7 @@ phases:
 
       - cd ${ARTIFACTS_DIR}
       - echo "Creating Workflow..."
-      - TMPWFINFO=$(aws omics create-workflow --definition-uri ${STAGING_URI}/${ARTIFACTFILE}.zip --parameter-template file://parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$NEXTPATCHVER)
+      - TMPWFINFO=$(aws omics create-workflow --definition-uri ${STAGING_URI}/${ARTIFACTFILE}.zip --parameter-template file://parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$PATCHV,BUILD_VERSION=$NEXTBUILDVER)
       - echo "${TMPWFINFO}" > ${ARTIFACTS_DIR}/${ARTIFACTFILE}.json
   post_build:
     commands:
