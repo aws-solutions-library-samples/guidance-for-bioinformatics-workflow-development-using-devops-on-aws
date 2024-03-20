@@ -31,28 +31,31 @@
 
 Bioinformatics workflows for omics are software, and like any other software product they have source control and versions that need to be tracked, tested, and released when ready for wider use. This also applies to workflows used with [AWS HealthOmics](https://aws.amazon.com/healthomics/) workflows.  Building, testing, and deploying new workflow versions is undifferentiated heavy lift. This solution makes the cloud resources for automated testing and deployment of bioinformatics workflows easy to acquire, provision, and use.
 
-> **NOTE:** Current version of the solution is compatible with **Nextflow** workflows only. The solution can be extended to other workflow languages supported by AWS HealthOmics (WDL and CWL) by making appropriate code changes in the build and CDK scripts.
+> **NOTE:** Current version of the solution is compatible with **Nextflow** workflows only and supports one target production account. The solution can be extended to other workflow languages supported by AWS HealthOmics (WDL and CWL) and multiple production accounts by making appropriate code changes in the build and CDK scripts.
 
 **Features provided by this solution include:**
 * Automated container build or migrations from public docker registries  
-* Automated tests 
+* Automated tests using user defined test data
 * Semantic Versioning and automated version updates
 * Cross Account deployments  
     * secure build  
     * environment isolation  
     * safe deployments  
+* Cross Account docker image access
+* Workflow and artifact tagging for data provenance
 
 ![architecture](./assets/images/architecture.png)
 
 The steps involved are generally the same across all organizations:
 
-1. A new version of the workflow definition is committed to source code version control (e.g. Git).  
-2. Any components of the definition that need to be built are processed - e.g. tooling containers, and staged to corresponding AWS services for testing: containers to ECR, workflow to AWS HealthOmics, etc. A static test is performed on the workflow definition to quickly detect any major issues.   
-3. The workflow is dynamically tested to ensure it performs as expected and there are no regressions in existing capabilities. Test data is used for this, ideally using a small dataset so tests complete quickly.    
-4. If all tests pass and the build is approved, a new release is made, and the workflow is deployed to production staging.
-5. Production staging triggers deployment automation in the production account, this can be ...
-6. ... creating AWS HealthOmics workflow resources in the production account via AWS CodeBuild.
-7. The workflow is now available for production use
+1. Workflow developers create a branch and write code for a new workflow or make changes to an existing workflow repository within AWS CodeCommit. Developers can specify major and minor version as part of semantic versioning. Since AWS CodeCommit supports Git, developers use git operations to push code, submit a pull request and merge to the ‘main’ branch. This triggers the CI/CD pipeline configured with AWS CodePipeline.
+2. Within AWS CodePipeline, the build process is triggered using AWS CodeBuild, where 1/ the latest source code is downloaded, 2/ using a pre-created AWS Step Functions state machines, import public docker images or build new docker images and store within Amazon Elastic Container Registry (ECR) repositories, 3/ artifacts for the AWS HealthOmics workflow are prepared and stored in Amazon S3, and an AWS HealthOmics workflow is created with the user defined semantic version and an auto-updated patch version
+3. Once the workflow is set up in AWS HealthOmics, an AWS Step Functions State Machine is triggered to test the HealthOmics workflow with some preconfigured test data. The state machine runs the HealthOmics workflow and waits for it to complete successfully.
+4. On successful completion of the test workflow, a user can review the test workflow outputs and manually approve the deployment of the workflow to a production AWS account. The approval action triggers an AWS CodeBuild job which prepares the workflow artifacts and uploads them to the production account’s Amazon S3 bucket. In addition, cross-account permissions are granted for the production account to access Amazon ECR repository images from the CI/CD account.
+5. When workflow artifacts are uploaded to the production account’s Amazon S3 bucket, an AWS Lambda function is triggered which checks for the necessary files and launches an AWS CodeBuild job. 
+6. The AWS CodeBuild job creates the workflow in AWS HealthOmics using the artifacts in S3.
+7. The AWS HealthOmics workflow is now available for use in the production account.
+
 
 The steps above are conceptually no different that those taken for other software products. The primary difference is the time scale involved. Workflow run times are dependent on the size of input data used, and test driven iteration times can be on the order of hours. Optimizing iteration times is out of scope for this solution. 
 
@@ -333,7 +336,8 @@ The following instructions assume you have cloned the solution repository to you
 
     Pay special attention to these files inside your workflow repository:
 
-    * `nextflow.config`: Update your pipeline version and name in the [`manifest` scope](https://www.nextflow.io/docs/latest/config.html#scope-manifest) to be compatible with semantic versioning (see [Semantic versioning](#semantic-versioning)).  
+    * `nextflow.config`: Update your pipeline version and name in the [`manifest` scope](https://www.nextflow.io/docs/latest/config.html#scope-manifest) to be compatible with semantic versioning (see [Semantic versioning](#semantic-versioning)).
+        > **NOTE**: Always use a MAJOR.MINOR.PATCH (e.g. 1.0.1) scheme to allow the solution to maintain the user-defined version and append a '.BUILD' version for every new code change (e.g. 1.0.1.1)
     * `parameter-template.json`: This is an additional file that is used when deploying the workflow to AWS HealthOmics. It specifies the top level parameters your workflow takes. For more information on what this looks like see [AWS HealthOmics Documentation](https://docs.aws.amazon.com/omics/latest/dev/parameter-templates.html)
     * `test.parameters.json`: This is an additional file that is used to run end-to-end (aka "dynamic") tests of your workflow using AWS HealthOmics. It provides test values for for any required top level parameters for the workflow. Note that any S3 and ECR URIs used should be accessible by AWS HealthOmics and consistent with the region the workflow is deployed to. It can have placeholder variables of `{{region}}` and `{{staging_uri}}` which are replaced with the AWS region name the workflow is tested in, and a deployment generated staging S3 URI used for testing artifacts, respectively.
 
@@ -444,13 +448,13 @@ Branch names and git tags in a code repository are used to generate resource tag
 Tags are defined on a specific branch using the following pattern:  
 
 ```text
-branchName-majorVersion.minorVersion.PatchVersion
+branchName-majorVersion.minorVersion.PatchVersion.BuildVersion
 ```
 
 Artifact (Workflow) names are generated following the pattern:  
 
 ```text
-workflowName-branchName-majorVersion.minorVersion.PatchVersion
+workflowName-branchName-majorVersion.minorVersion.PatchVersion.BuildVersion
 ```
 
 Resource tags on workflows encode the following:
@@ -458,11 +462,12 @@ Resource tags on workflows encode the following:
 * MAJOR_VERSION
 * MINOR_VERSION
 * PATCH_VERSION
+* BUILD_VERSION
 * COMMIT_ID
 * BUILD_SOURCE
 * STARTED_BY
 
-`MAJOR_VERSION` and `MINOR_VERION` are derived from the `manifest` scope in the `nextflow.config` file that accompanies a Nextflow based workflow. `PATCH_VERSION`` is automatically generated based on previous git tags in the source code branch that is built.  
+`MAJOR_VERSION`, `MINOR_VERION` and `PATCH_VERSION` are derived from the `manifest` scope in the `nextflow.config` file that accompanies a Nextflow based workflow. `BUILD_VERSION` is automatically generated based on previous git tags in the source code branch that is built.  
 
 `BRANCH`, `COMMIT_ID`, `STARTED_BY`, and `BUILD_SOURCE` are derived from environment variables availabe to the CodeBuild project.
 
