@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 import logging
 import os
 
-X_ACCOUNT_POLICY_TEMPLATE="""{
+X_ACCOUNT_POLICY_TEMPLATE = {
     "Version" : "2008-10-17",
     "Statement" : [
         {
@@ -23,12 +23,9 @@ X_ACCOUNT_POLICY_TEMPLATE="""{
             ]
         }
     ]
-}"""
+}
 
-OMICS_SERVICE_ACCESS_POLICY_TEMPLATE="""{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
+OMICS_SERVICE_ACCESS_POLICY_TEMPLATE = {
       "Sid": "omics workflow access",
       "Effect": "Allow",
       "Principal": {
@@ -40,8 +37,6 @@ OMICS_SERVICE_ACCESS_POLICY_TEMPLATE="""{
         "ecr:GetDownloadUrlForLayer"
       ]
     }
-  ]
-}"""
 
 
 def generate_root_arn_from_account_id(account_id):
@@ -78,7 +73,7 @@ def main(args):
     for repo in repositories:
         
         # get omics service permission from template
-        omics_permission_policy_statement = json.loads(OMICS_SERVICE_ACCESS_POLICY_TEMPLATE)['Statement'][0]
+        omics_permission_policy_statement = OMICS_SERVICE_ACCESS_POLICY_TEMPLATE.copy()
 
         # get current repository policy
         logging.info("Get policy for repository " + repo)
@@ -94,7 +89,7 @@ def main(args):
 
         new_statements = []
         # add aws accounts as principals
-        policy_document = json.loads(X_ACCOUNT_POLICY_TEMPLATE)
+        policy_document = X_ACCOUNT_POLICY_TEMPLATE.copy()
         logging.info("Add principals to policy")
         for account in aws_accounts:
             policy_document['Statement'][0]['Principal']['AWS'].append(generate_root_arn_from_account_id(account))
