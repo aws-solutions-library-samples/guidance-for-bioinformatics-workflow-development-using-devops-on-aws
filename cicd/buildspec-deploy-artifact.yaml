@@ -33,7 +33,7 @@ phases:
     commands:
       - echo "Update ECR repository policy to allow DEPLOY account to access images"
       - mkdir -p $CODEBUILD_SRC_DIR/tmp
-      - unzip workflow.zip -d $CODEBUILD_SRC_DIR/tmp
+      - unzip $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/workflow.zip -d $CODEBUILD_SRC_DIR/tmp
       - python3 $SCRIPTDIR/set_repository_policy.py --omics_config $CODEBUILD_SRC_DIR/tmp/conf/omics-images.config $DEPLOY_ACCOUNT_ID
       - echo "Tagging commit..."
       - $SCRIPTDIR/tag_commit.sh $BUILDV

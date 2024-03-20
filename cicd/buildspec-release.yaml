@@ -27,7 +27,8 @@ phases:
       - export MAJORV=$(echo ${workflowVersion} | sed s/v//g | cut -d. -f1)
       - export MINORV=$(echo ${workflowVersion} | sed s/v//g | cut -d. -f2)
       - export PATCHV=$(echo ${workflowVersion} | sed s/v//g | cut -d. -f3)
-      - export TAGNAME="${CURRBRANCH}-${MAJORV}.${MINORV}.${PATCHV}"
+      - export BUILDV=$(echo ${workflowVersion} | sed s/v//g | cut -d. -f4)
+      - export TAGNAME="${CURRBRANCH}-${MAJORV}.${MINORV}.${PATCHV}.${BUILDV}"
       - export ARTIFACTNAME="${WFNAME}-${TAGNAME}"
       - export ARTIFACTFILE="workflow"      
       - git config --global user.email "CodeBuild@example.com"
@@ -42,7 +43,7 @@ phases:
       - cd $BASEDIR/workflow
       - echo "Creating Workflow..."
       - echo "You might want to delete previous versions of this workflow"
-      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://${BASEDIR}/workflow/${ARTIFACTFILE}.zip --parameter-template file://${BASEDIR}/workflow/parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$PATCHV)
+      - TMPWFINFO=$(aws omics create-workflow --definition-zip fileb://${BASEDIR}/workflow/${ARTIFACTFILE}.zip --parameter-template file://${BASEDIR}/workflow/parameter-template.json --name ${ARTIFACTNAME} --engine $workflow_engine --tags COMMIT_ID=$CODEBUILD_RESOLVED_SOURCE_VERSION,BUILD_SOURCE=$CODEBUILD_BUILD_ID,STARTED_BY=$CODEBUILD_INITIATOR,BRANCH=$CURRBRANCH,MAJOR_VERSION=$MAJORV,MINOR_VERSION=$MINORV,PATCH_VERSION=$PATCHV,BUILD_VERSION=$BUILDV)
       - echo "${TMPWFINFO}" > $BASEDIR/${ARTIFACTFILE}.json
   post_build:
     commands:
