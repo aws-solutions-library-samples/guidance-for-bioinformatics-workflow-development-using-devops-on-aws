@@ -51,7 +51,7 @@ The steps involved are generally the same across all organizations:
 3. The workflow is dynamically tested to ensure it performs as expected and there are no regressions in existing capabilities. Test data is used for this, ideally using a small dataset so tests complete quickly.    
 4. If all tests pass and the build is approved, a new release is made, and the workflow is deployed to production staging.
 5. Production staging triggers deployment automation in the production account, this can be ...
-6. ... build in the production account, similar to what was done in step 2, creating container and workflow assets as needed.
+6. ... creating AWS HealthOmics workflow resources in the production account via AWS CodeBuild.
 7. The workflow is now available for production use
 
 The steps above are conceptually no different that those taken for other software products. The primary difference is the time scale involved. Workflow run times are dependent on the size of input data used, and test driven iteration times can be on the order of hours. Optimizing iteration times is out of scope for this solution. 
