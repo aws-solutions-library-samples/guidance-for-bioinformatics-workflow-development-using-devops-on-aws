@@ -23,6 +23,7 @@ export interface OmicsCicdPerWorkflowStackProps extends StackProps {
   buildRoleName: string,
   deployEnv: DeployEnvironment,
   deployBucket: s3.Bucket,
+  prodAccountId: string,
   codePipelineRole: iam.Role
 }
 
@@ -73,7 +74,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
       environmentVariables: {
         WFNAME: { value: props.workflowName },
         BRANCH: { value: props.projectBranch },
-        ACCOUNT_ID: { value: props.deployEnv.env.account },
+        DEPLOY_ACCOUNT_ID: { value: props.prodAccountId },
         DEPLOYBUCKET: { value: props.deployBucket.bucketName },
         TESTBUCKET: { value: testFilesBucketName }
       },

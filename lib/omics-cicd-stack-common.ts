@@ -112,6 +112,7 @@ export class OmicsCommonCicdStack extends Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeCommitPowerUser"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonSSMReadOnlyAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
       ],
       inlinePolicies: {
         CdkDeployPolicy: cdkDeployPolicy,
