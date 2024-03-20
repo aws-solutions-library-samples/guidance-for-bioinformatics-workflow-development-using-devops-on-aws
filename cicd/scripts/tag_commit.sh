@@ -1,17 +1,17 @@
 #!/bin/bash
 set -euxo pipefail
 
-# patch version from arguments
-NEXTPATCHVER=$1
+# build version from arguments
+NEXTBUILDVER=$1
 
-echo "Tagging commit with ${NEXTPATCHVER}"
+echo "Tagging commit with ${NEXTBUILDVER}"
 
 # Get current branch name
 CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-if [ ! -z ${NEXTPATCHVER}  ] && [ ! -z ${MAJORV} ] && [ ! -z ${MINORV} ] && [ ! -z ${CODEBUILD_RESOLVED_SOURCE_VERSION} ]
+if [ ! -z ${NEXTBUILDVER}  ] && [ ! -z ${MAJORV} ] && [ ! -z ${MINORV} ] && [ ! -z ${PATCHV} ] && [ ! -z ${CODEBUILD_RESOLVED_SOURCE_VERSION} ]
 then
-      TAGNAME="${CURRBRANCH}-${MAJORV}.${MINORV}.${NEXTPATCHVER}"
+      TAGNAME="${CURRBRANCH}-${MAJORV}.${MINORV}.${PATCHV}.${NEXTBUILDVER}"
       echo "${TAGNAME}"
       git tag -a ${TAGNAME} -m "CodeBuild generated tag" $CODEBUILD_RESOLVED_SOURCE_VERSION
       git push origin --tags
