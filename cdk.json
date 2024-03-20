@@ -17,21 +17,20 @@
     ]
   },
   "context": {
-    "cicd_account": "276312382804",
-    "test_account": "276312382804",
-    "prod_account": "796046537018",
-    "aws_region": "us-east-1",
+    "cicd_account": "<your AWS Account ID for CICD>",
+    "test_account": "<your AWS Account ID for TEST>",
+    "prod_account": "<your AWS Account ID for PROD>",
+    "aws_region": "<AWS REGION>",
     "workflows": {
-      "example-rnaseq-qc": "aws-healthomics-rnaseq-qc"
+      "<WORKFLOW NAME>": "<CODE COMMIT REPO NAME in CICD account>"
     },
     "source_data_s3_uris": [
-      "s3://aws-genomics-static-*/*"
+      ""
     ],
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": [
-      "aws",
-      "aws-cn"
+      "aws"
     ],
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": true,
