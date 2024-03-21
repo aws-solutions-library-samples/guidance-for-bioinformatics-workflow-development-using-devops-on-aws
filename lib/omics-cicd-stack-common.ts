@@ -53,9 +53,19 @@ export class OmicsCommonCicdStack extends Stack {
         effect: iam.Effect.ALLOW,
         actions: [
           'states:StartExecution',
+          'states:DescribeExecution'
         ],
         resources: [
-          'arn:aws:states:*:*:stateMachine:omx-container-puller'
+          `arn:aws:states:${props.cicdEnv.env.region}:${props.cicdEnv.env.account}:stateMachine:omx-container-puller`,
+        ]
+      }),
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'states:DescribeExecution'
+        ],
+        resources: [
+          `arn:aws:states:${props.cicdEnv.env.region}:${props.cicdEnv.env.account}:execution:omx-container-puller:*`
         ]
       })],
     });

@@ -70,6 +70,7 @@ phases:
       - cp $WFDIR/container_pull_manifest.json ${ARTIFACTS_DIR}
       - cat $WFDIR/container_pull_manifest.json
       - cp $WFDIR/test.parameters.json ${ARTIFACTS_DIR}
+      - cp $WFDIR/omx_container_puller_execution_report.json ${ARTIFACTS_DIR}
 
       - cd ${ARTIFACTS_DIR}
       - echo "Creating Workflow..."
