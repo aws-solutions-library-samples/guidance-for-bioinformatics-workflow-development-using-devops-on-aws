@@ -31,6 +31,8 @@ phases:
       - printenv
   build:
     commands:
+      - echo "Update ECR repository policy to allow DEPLOY account to access images"
+      - python3 $SCRIPTDIR/set_repository_policy.py --container_puller_report $CODEBUILD_SRC_DIR_Artifact_Build_workflow_build_action/omx_container_puller_execution_report.json  $DEPLOY_ACCOUNT_ID
       - echo "Tagging commit..."
       - $SCRIPTDIR/tag_commit.sh $BUILDV
       - echo "Copying artifacts to target bucket ${DEPLOYBUCKET}"

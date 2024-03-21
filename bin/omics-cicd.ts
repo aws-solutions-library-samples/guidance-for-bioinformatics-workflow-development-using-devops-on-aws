@@ -46,6 +46,7 @@ Object.keys(workflowNames).forEach(key => {
     buildRoleName: buildRoleName,
     deployEnv: { name: "test", env: envTest },
     deployBucket: deployResourcesStack.deployBucket,
+    prodAccountId: envProd.account,
     codePipelineRole: cicdCommonResourcesStack.codePipelineRole
   });
 
