@@ -3,7 +3,6 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { OmicsCommonCicdStack } from '../lib/omics-cicd-stack-common';
 import { OmicsCicdPerWorkflowStack } from '../lib/omics-cicd-stack-per-workflow';
-//import { OmicsDeployPerWorkflowResourcesStack } from '../lib/omics-deploy-per-workflow-resources-stack';
 import { OmicsDeployCommonResourcesStack } from '../lib/omics-deploy-common-resources-stack';
 
 const app = new cdk.App();
@@ -37,18 +36,6 @@ cicdCommonResourcesStack.addDependency(deployCommonResourcesStack);
 Object.keys(workflowNames).forEach(key => {
   console.log(key, workflowNames[key]);
 
-  // Stack for workflow specific deploy resources 
-  /*
-  const deployPerWorkflowResourcesStack = new OmicsDeployPerWorkflowResourcesStack(app, `OmicsDeployPerWorkflowResourcesStack-${key}`, {
-    env: envProd,
-    workflowName: key,
-    runReleaseBuildLambdaRole: deployCommonResourcesStack.runReleaseBuildLambdaRole,
-    cicdEnv: { name: "CICD", env: envCICD },
-    deployBucket: deployCommonResourcesStack.deployBucket,
-    deployRole: deployCommonResourcesStack.deployRole
-  });
-  deployPerWorkflowResourcesStack.addDependency(deployCommonResourcesStack);
-  */
   // Stack for workflow specific CICD resources
   const cicdPerWorkflowResourcesStack = new OmicsCicdPerWorkflowStack(app, `OmicsCicdPerWorkflowStack-${key}`, {
     env: envCICD,
