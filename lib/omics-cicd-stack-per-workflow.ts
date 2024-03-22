@@ -139,7 +139,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
     });
 
     const buildAction = new codepipeline_actions.CodeBuildAction({
-      actionName: `workflow_build_action`,
+      actionName: 'workflow_build_action',
       project: buildProject,
       input: sourceOutput,
       outputs: [buildOutput],
@@ -154,7 +154,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
       stageName: 'Test',
     });
     const testAction = new codepipeline_actions.StepFunctionInvokeAction({
-      actionName: `workflow_test_action`,
+      actionName: 'workflow_test_action',
       stateMachine: stateMachineObject,
       stateMachineInput: codepipeline_actions.StateMachineInput.filePath(buildOutput.atPath('workflow.json')),
     });
@@ -165,7 +165,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
 
     const approveStage = buildPipeline.addStage({ stageName: 'Approve' });
     const manualApprovalAction = new codepipeline_actions.ManualApprovalAction({
-      actionName: `workflow_approve_action`,
+      actionName: 'workflow_approve_action',
       additionalInformation: 'Approve this version to be deployed in production.',
       notificationTopic: new sns.Topic(this, 'Topic'), // optional
       notifyEmails: [
@@ -182,7 +182,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
     });
 
     const deployAction = new codepipeline_actions.CodeBuildAction({
-      actionName: `workflow_deploy_action`,
+      actionName: 'workflow_deploy_action',
       project: deployProject,
       input: sourceOutput,
       extraInputs: [buildOutput],

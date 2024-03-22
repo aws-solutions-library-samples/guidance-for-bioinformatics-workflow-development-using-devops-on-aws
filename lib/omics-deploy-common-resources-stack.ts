@@ -128,7 +128,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
     //// CodeBuild Projects
     // Build Project
     const releaseProject = new codebuild.Project(this, 'releaseProject', {
-      projectName: `release_project`,
+      projectName: 'release_project',
       role: this.deployRole,
       buildSpec: codebuild.BuildSpec.fromAsset('cicd/buildspec-release.yaml'),
       environmentVariables: {
@@ -146,7 +146,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
     const runReleaseBuildProject = new lambda.Function(
       this, "runReleaseBuildProject",
       {
-        functionName: `runReleaseBuildProject`,
+        functionName: 'runReleaseBuildProject',
         runtime: lambda.Runtime.PYTHON_3_10,
         handler: "lambda_function.lambda_handler",
         timeout: Duration.seconds(300),

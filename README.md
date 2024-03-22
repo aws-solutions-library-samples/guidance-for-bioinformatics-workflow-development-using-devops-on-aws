@@ -438,6 +438,7 @@ npx cdk destroy --profile cicd --all
 
 - This Guidance creates ECR Private image repositories that may be billed if storing them is [beyond free tier limits](https://aws.amazon.com/ecr/pricing/).
 - During operation, this Guildance accumulates build artifacts per released workflow versions in S3. This is intentional and considered best practice for provenance.
+- Due to CloudFormation stack name limitation of 128 characters, the worklow name is limited to 101 characters instead of the allowed 128 characters to accomodate stack naming convention in this solution.
 
 ### Semantic versioning
 
