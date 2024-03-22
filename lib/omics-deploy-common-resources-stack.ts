@@ -2,24 +2,24 @@ import { Duration, Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
-import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { DeployEnvironment } from "../types";
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
 // extend the props of the stack by adding some params
 export interface OmicsDeployResourcesProps extends StackProps {
   cicdEnv: DeployEnvironment,
-  workflowName: string,
   buildRoleName: string
 }
 
-export class OmicsDeployResourcesStack extends Stack {
+export class OmicsDeployCommonResourcesStack extends Stack {
   public readonly crossAccountRole: iam.Role;
   public readonly deployRole: iam.Role;
   public readonly deployBucket: s3.Bucket;
-  public readonly deployKeyArn: string;
+  public readonly runReleaseBuildLambdaRole: iam.Role;
+  
 
   constructor(scope: Construct, id: string, props: OmicsDeployResourcesProps) {
     super(scope, id, props);
@@ -54,7 +54,7 @@ export class OmicsDeployResourcesStack extends Stack {
 
     // IAM Roles
     this.crossAccountRole = new iam.Role(this, 'crossAccountRole', {
-      roleName: `CrossAccountRole-${props.workflowName}`,
+      roleName: 'CrossAccountRole-CodeBuild',
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
       description: 'CodeBuild standard Role',
       managedPolicies: [
@@ -68,7 +68,7 @@ export class OmicsDeployResourcesStack extends Stack {
     });
 
     this.deployRole = new iam.Role(this, 'deployRole', {
-      roleName: `DeployRole-${props.workflowName}`,
+      roleName: 'DeployRole-CodeBuild',
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
       description: 'CodeBuild standard Role',
       managedPolicies: [
@@ -84,9 +84,9 @@ export class OmicsDeployResourcesStack extends Stack {
     });
 
     const runReleaseBuildLambdaRole = new iam.Role(this, 'runReleaseBuildLambdaRole', {
-      roleName: `RunReleaseBuildRole-${props.workflowName}`,
+      roleName: 'RunReleaseBuildRole-Lambda',
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      description: 'b',
+      description: '',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeBuildDeveloperAccess"),
@@ -101,26 +101,11 @@ export class OmicsDeployResourcesStack extends Stack {
     // Service Role from CICD stack used by codepipeline
     const cicdPipelineRole = new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/${props.buildRoleName}`)
 
-    //// KMS Key for Bucket
-    /*
-    const deployKey = new kms.Key(this, 'artifactsKey', {
-      description: "CMK shared with deployment account for artifacts",
-      alias: "artifacts-" + props.workflowName + "-" + this.account,
-      enableKeyRotation: false,
-    }
-    );
-
-    // We pass key arn, because cdk don't allow cross stack key sharing in this scenario
-    this.deployKeyArn = deployKey.keyArn;
-    deployKey.grantEncryptDecrypt(cicdPipelineRole);
-    */
-
-    //// Bucket for artifacts
+    //// Common Bucket for artifacts
     this.deployBucket = new s3.Bucket(this, 'deployBucket', {
-      bucketName: `artifact-${props.workflowName}-${this.account}`,
+      bucketName: `artifact-healthomics-${this.account}-${this.region}`,
       removalPolicy: RemovalPolicy.DESTROY, //change if you want to destroy the bucket
       encryption: s3.BucketEncryption.S3_MANAGED, // Move to KMS once enalbed cross-stack key sharing
-      //encryptionKey: deployKey, // Enable once enalbed cross-stack key sharing
       enforceSSL: true,
       versioned: false,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
@@ -128,8 +113,6 @@ export class OmicsDeployResourcesStack extends Stack {
     });
     this.deployBucket.grantRead(new iam.AccountPrincipal(props.cicdEnv.env.account));
     this.deployBucket.grantPut(new iam.AccountPrincipal(props.cicdEnv.env.account));
-    //this.deployBucket.grantReadWrite(new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/codePipelineRole-${props.workflowName}`));
-    //this.deployBucket.grantReadWrite(new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/OmicsCicdMinimalStack*`));
     this.deployBucket.grantRead(this.deployRole);
     this.deployBucket.grantReadWrite(cicdPipelineRole);
     this.deployBucket.grantRead(runReleaseBuildLambdaRole);
@@ -145,11 +128,10 @@ export class OmicsDeployResourcesStack extends Stack {
     //// CodeBuild Projects
     // Build Project
     const releaseProject = new codebuild.Project(this, 'releaseProject', {
-      projectName: `release_project-${props.workflowName}`,
+      projectName: 'release_project',
       role: this.deployRole,
       buildSpec: codebuild.BuildSpec.fromAsset('cicd/buildspec-release.yaml'),
       environmentVariables: {
-        WFNAME: { value: props.workflowName },
         ACCOUNT_ID: { value: this.account },
         DEPLOYBUCKET: { value: this.deployBucket.bucketName }
       },
@@ -159,26 +141,22 @@ export class OmicsDeployResourcesStack extends Stack {
       },
     });
 
-
-    //// Lambda Functions
-    
+    //// Lambda Functions 
     // Function to run Release Codebuild Project
     const runReleaseBuildProject = new lambda.Function(
       this, "runReleaseBuildProject",
       {
-        functionName: `runReleaseBuildProject-${props.workflowName}`,
+        functionName: 'runReleaseBuildProject',
         runtime: lambda.Runtime.PYTHON_3_10,
         handler: "lambda_function.lambda_handler",
         timeout: Duration.seconds(300),
         code: lambda.Code.fromAsset("lambda/runReleaseBuildProject/"),
         role: runReleaseBuildLambdaRole,
         environment: {
-          WFNAME: props.workflowName,
           CICD_ACCOUNT_ID: props.cicdEnv.env.account
-        },
+        }
       }
     );
-      
 
     // S3 Event and Trigger for Run Release CodeBuild Project Function
     const s3DeployPutEventSource = new lambdaEventSources.S3EventSource(this.deployBucket, {
@@ -193,4 +171,3 @@ export class OmicsDeployResourcesStack extends Stack {
     runReleaseBuildProject.addEventSource(s3DeployPutEventSource);
   }
 };
-

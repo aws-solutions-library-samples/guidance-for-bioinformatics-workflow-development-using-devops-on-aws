@@ -11,7 +11,7 @@ phases:
       - export BUILD_DIR_NAME="build"
       - export BASEDIR="${CODEBUILD_SRC_DIR}/$BUILD_DIR_NAME"
       - export WFDIR="${CODEBUILD_SRC_DIR}"      
-      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - export CICD_SCRIPTS_S3DIR="s3://${SCRIPTBUCKET}/cicd_scripts/"
       - export SCRIPTDIR="${BASEDIR}/scripts"
       - mkdir -p $SCRIPTDIR
       - aws s3 cp $CICD_SCRIPTS_S3DIR "${SCRIPTDIR}/" --recursive

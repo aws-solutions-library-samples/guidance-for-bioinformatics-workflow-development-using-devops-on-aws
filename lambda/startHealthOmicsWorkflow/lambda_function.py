@@ -46,7 +46,7 @@ def handler(event, context):
         print("Attempt to start workflow run")
         response = omics_client.start_run(
             workflowId=workflow_id,
-            name="test-run",
+            name="test-run-" + workflow_id + "-" + commit_id,
             roleArn=role_arn,
             parameters=params,
             outputUri=output_s3_path

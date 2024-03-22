@@ -35,16 +35,8 @@ export class OmicsCicdPerWorkflowStack extends Stack {
   constructor(scope: Construct, id: string, props: OmicsCicdPerWorkflowStackProps) {
     super(scope, id, props);
 
-
-    //// Git repositories
-
-    //this.workflowsCodeRepo = new codecommit.Repository(this, 'workflows_code_git', {
-    //  repositoryName: `healthomics-${props.workflowName}-workflow`,
-      //repositoryName: 'healthomics-workflow',
-    //  code: codecommit.Code.fromDirectory(path.join(__dirname, '../project/'), props.projectBranch),
-    //  description: `HealthOmics Workflows Git Repository for ${props.workflowName} workflow.`,
-    //})
     const testFilesBucketName = Fn.importValue('OmicsCicdTestDataBucket');
+    const scriptFilesBucketName = Fn.importValue('OmicsCicdScriptsBucket');
 
     //// CodeBuild Projects
     // Build Project
@@ -58,7 +50,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
       environmentVariables: {
         WFNAME: { value: props.workflowName },
         ACCOUNT_ID: { value: this.account },
-        TESTBUCKET: { value: testFilesBucketName }
+        SCRIPTBUCKET: { value: scriptFilesBucketName }
       },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
@@ -76,7 +68,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
         BRANCH: { value: props.projectBranch },
         DEPLOY_ACCOUNT_ID: { value: props.prodAccountId },
         DEPLOYBUCKET: { value: props.deployBucket.bucketName },
-        TESTBUCKET: { value: testFilesBucketName }
+        SCRIPTBUCKET: { value: scriptFilesBucketName }
       },
       environment: {
         buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
@@ -85,27 +77,8 @@ export class OmicsCicdPerWorkflowStack extends Stack {
     });
 
     // Dynamic Tests Project
-    
-
     const omicsTesterRole = iam.Role.fromRoleArn(
       this, 'OmicsTesterRole', Fn.importValue('OmicsTesterRole'));
-
-    // const testProject = new codebuild.PipelineProject(this, 'test_project', {
-    //   projectName: 'test_project-'.concat(props.workflowName),
-    //   role: codeBuildRole,
-    //   buildSpec: codebuild.BuildSpec.fromAsset('cicd/buildspec-test.yaml'),
-    //   environmentVariables: {
-    //     WFNAME: { value: props.workflowName },
-    //     ACCOUNT_ID: { value: this.account },
-    //     TESTS_BUCKET_NAME: { value: Fn.importValue('OmicsCicdTestDataBucket') },
-    //     OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
-    //   },
-    //   environment: {
-    //     buildImage: codebuild.LinuxBuildImage.fromCodeBuildImageId('aws/codebuild/amazonlinux2-x86_64-standard:5.0'),
-    //     privileged: false,
-    //   },
-    // });
-
 
     // Function to run Health Omics workflow and wait for success/failure
     const stateMachineDefinitionJsonFile = fs.readFileSync(path.resolve(__dirname, '../step_function/healthomics_workflow_state_machine.json'))
@@ -120,7 +93,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
         "HealthOmicsWorkflowLambdaName": "runHealthOmicsWorkflow",
         "HealthOmicsWorkflowJobRole": omicsTesterRole.roleArn,
         "HealthOmicsWorkflowOutputS3": `s3://${testFilesBucketName}/${props.workflowName}/output`,
-        "HealthOmicsWorkflowStagingS3": `s3://${testFilesBucketName}/${props.workflowName}/staging`,
+        "HealthOmicsWorkflowStagingS3": `s3://${scriptFilesBucketName}/${props.workflowName}/staging`,
         "HealthOmicsWorkflowParamsFile": `test.parameters.json`
       }
     });
@@ -176,29 +149,12 @@ export class OmicsCicdPerWorkflowStack extends Stack {
 
     buildStage.addAction(buildAction);
 
-
-    // Pipeline test stage
-    //const testAction = new codepipeline_actions.CodeBuildAction({
-    //  actionName: 'workflow_test_action',
-    //  project: testProject,
-    //  input: sourceOutput,
-    //  environmentVariables: {
-    //    WFNAME: { value: props.workflowName },
-    //    ACCOUNT_ID: { value: props.cicdEnv.env.account },
-    //    TESTS_BUCKET_NAME: { value: testFilesBucket.bucketName },
-    //    OMICS_TESTER_ROLE_ARN: { value: omicsTesterRole.roleArn }
-    //  }, extraInputs: [buildOutput],
-    //  outputs: [new codepipeline.Artifact()],
-    //  executeBatchBuild: false,
-    //  combineBatchBuildArtifacts: false,
-    //});
-
     // Pipeline test stage
     const testStage = buildPipeline.addStage({
       stageName: 'Test',
     });
     const testAction = new codepipeline_actions.StepFunctionInvokeAction({
-      actionName: 'Invoke',
+      actionName: 'workflow_test_action',
       stateMachine: stateMachineObject,
       stateMachineInput: codepipeline_actions.StateMachineInput.filePath(buildOutput.atPath('workflow.json')),
     });
@@ -209,7 +165,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
 
     const approveStage = buildPipeline.addStage({ stageName: 'Approve' });
     const manualApprovalAction = new codepipeline_actions.ManualApprovalAction({
-      actionName: 'Approve',
+      actionName: 'workflow_approve_action',
       additionalInformation: 'Approve this version to be deployed in production.',
       notificationTopic: new sns.Topic(this, 'Topic'), // optional
       notifyEmails: [
@@ -226,7 +182,7 @@ export class OmicsCicdPerWorkflowStack extends Stack {
     });
 
     const deployAction = new codepipeline_actions.CodeBuildAction({
-      actionName: `workflow_deploy_action-${props.workflowName}`,
+      actionName: 'workflow_deploy_action',
       project: deployProject,
       input: sourceOutput,
       extraInputs: [buildOutput],

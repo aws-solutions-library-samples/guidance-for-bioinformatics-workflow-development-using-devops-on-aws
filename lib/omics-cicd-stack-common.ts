@@ -52,8 +52,7 @@ export class OmicsCommonCicdStack extends Stack {
       statements: [new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
-          'states:StartExecution',
-          'states:DescribeExecution'
+          'states:StartExecution'
         ],
         resources: [
           `arn:aws:states:${props.cicdEnv.env.region}:${props.cicdEnv.env.account}:stateMachine:omx-container-puller`,
@@ -158,8 +157,6 @@ export class OmicsCommonCicdStack extends Stack {
     const codePipelineRole = new iam.Role(this, 'codePipelineRole', {
       roleName: `omicsCodePipelineRole`,
       assumedBy: new iam.ServicePrincipal('codepipeline.amazonaws.com'),
-      //assumedBy: new iam.ArnPrincipal('arn:aws:iam::889574981585:role/OmicsCicdMinimalStack-workflowsbuildpipelineRole51E-HomhQE8yWszD'),
-      //assumedBy: new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/OmicsCicdMinimalStack*`),
       description: 'CodePipeline standard Role',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
@@ -177,7 +174,7 @@ export class OmicsCommonCicdStack extends Stack {
     //// S3 Buckets
     // Bucket for testing files, etc. in CICD account
     const testFilesBucket = new s3.Bucket(this, 'testFilesBucket', {
-      bucketName: `test-files-omics-cicd-${this.account}-${this.region}`,
+      bucketName: `healthomics-cicd-test-data-${this.account}-${this.region}`,
       removalPolicy: RemovalPolicy.DESTROY, //change if you want to retain the bucket
       encryption: s3.BucketEncryption.S3_MANAGED, // change if you want to use KMS keys for encryption
       enforceSSL: true,
@@ -188,10 +185,23 @@ export class OmicsCommonCicdStack extends Stack {
     testFilesBucket.grantReadWrite(codeBuildRole);
     testFilesBucket.grantReadWrite(codePipelineRole);
 
+    // Bucket for CICD scripts in CICD account
+    const cicdScriptsBucket = new s3.Bucket(this, 'cicdScriptsBucket', {
+      bucketName: `healthomics-cicd-scripts-${this.account}-${this.region}`,
+      removalPolicy: RemovalPolicy.DESTROY, //change if you want to retain the bucket
+      encryption: s3.BucketEncryption.S3_MANAGED, // change if you want to use KMS keys for encryption
+      enforceSSL: true,
+      versioned: false,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    });
+    cicdScriptsBucket.grantReadWrite(codeBuildRole);
+    cicdScriptsBucket.grantReadWrite(codePipelineRole);
+
     // Deploy CICD scripts to this bucket in CICD account
     const s3Deploy = new s3deploy.BucketDeployment(this, 'UploadCiCdScripts', {
       sources: [s3deploy.Source.asset('cicd/scripts/')],
-      destinationBucket: testFilesBucket,
+      destinationBucket: cicdScriptsBucket,
       destinationKeyPrefix: 'cicd_scripts/',
       retainOnDelete: false
     });
@@ -296,6 +306,7 @@ export class OmicsCommonCicdStack extends Stack {
     new CfnOutput(this, 'OmicsTesterRole', { value: omicsTesterRole.roleArn, exportName: 'OmicsTesterRole' });
     new CfnOutput(this, 'HealthOmicsStateMachineRole', { value: runHealthOmicsStateMachineRole.roleArn, exportName: 'HealthOmicsStateMachineRole' });
     new CfnOutput(this, 'OmicsCicdTestDataBucket', { value: testFilesBucket.bucketName, exportName: 'OmicsCicdTestDataBucket' });
+    new CfnOutput(this, 'OmicsCicdScriptsBucket', { value: cicdScriptsBucket.bucketName, exportName: 'OmicsCicdScriptsBucket' });
 
   }
 };
