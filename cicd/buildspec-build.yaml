@@ -15,9 +15,9 @@ phases:
       - export PATH=$PATH:$BASEDIR 
       - export WFDIR="${CODEBUILD_SRC_DIR}"
       - export ARTIFACTS_DIR="${BASEDIR}/artifacts"
-      - export CICD_SCRIPTS_S3DIR="s3://${TESTBUCKET}/cicd_scripts/"
+      - export CICD_SCRIPTS_S3DIR="s3://${SCRIPTBUCKET}/cicd_scripts/"
       - export SCRIPTDIR="${BASEDIR}/scripts"
-      - export STAGING_URI="s3://${TESTBUCKET}/${WFNAME}/staging/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
+      - export STAGING_URI="s3://${SCRIPTBUCKET}/${WFNAME}/staging/${CODEBUILD_RESOLVED_SOURCE_VERSION}"
       - export ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
       - export CURRBRANCH=$(git rev-parse --abbrev-ref HEAD)
       - echo $CODEBUILD_RESOLVED_SOURCE_VERSION

@@ -20,7 +20,7 @@ def lambda_handler(event, context):
     workflow_name=file_path[2]
     project_branch=file_path[3]
     workflow_version=file_path[4]
-    release_project_name='release_project-'+workflow_name
+    release_project_name='release_project'
     
     logger.debug('workflow name is '+workflow_name)
     logger.debug('workflow version is '+workflow_version)
