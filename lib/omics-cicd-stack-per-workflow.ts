@@ -7,7 +7,6 @@ import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as kms from 'aws-cdk-lib/aws-kms';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions'
 import { DeployEnvironment } from "../types";
 import * as path from 'path';
@@ -28,10 +27,7 @@ export interface OmicsCicdPerWorkflowStackProps extends StackProps {
 }
 
 export class OmicsCicdPerWorkflowStack extends Stack {
-  public readonly crossAccountRole: iam.Role;
-  public readonly deployRole: iam.Role;
-  public readonly pipelineKey: kms.Key;
-  public readonly workflowsCodeRepo: codecommit.Repository;
+
   constructor(scope: Construct, id: string, props: OmicsCicdPerWorkflowStackProps) {
     super(scope, id, props);
 

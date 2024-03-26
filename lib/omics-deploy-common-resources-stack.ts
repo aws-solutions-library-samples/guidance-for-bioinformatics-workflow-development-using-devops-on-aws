@@ -53,7 +53,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
     });
 
     // IAM Roles
-    this.crossAccountRole = new iam.Role(this, 'crossAccountRole', {
+    const crossAccountRole = new iam.Role(this, 'crossAccountRole', {
       roleName: 'CrossAccountRole-CodeBuild',
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
       description: 'CodeBuild standard Role',
@@ -67,7 +67,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       },
     });
 
-    this.deployRole = new iam.Role(this, 'deployRole', {
+    const deployRole = new iam.Role(this, 'deployRole', {
       roleName: 'DeployRole-CodeBuild',
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
       description: 'CodeBuild standard Role',
@@ -96,10 +96,6 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       },
     });
 
-    
-
-    // Service Role from CICD stack used by codepipeline
-    const cicdPipelineRole = new iam.ArnPrincipal(`arn:aws:iam::${props.cicdEnv.env.account}:role/${props.buildRoleName}`)
 
     //// Common Bucket for artifacts
     this.deployBucket = new s3.Bucket(this, 'deployBucket', {
@@ -111,11 +107,12 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
+    
     this.deployBucket.grantRead(new iam.AccountPrincipal(props.cicdEnv.env.account));
     this.deployBucket.grantPut(new iam.AccountPrincipal(props.cicdEnv.env.account));
-    this.deployBucket.grantRead(this.deployRole);
-    this.deployBucket.grantReadWrite(cicdPipelineRole);
+    this.deployBucket.grantRead(deployRole);
     this.deployBucket.grantRead(runReleaseBuildLambdaRole);
+    
 
     // Deploy CICD scripts to the deployment bucket 
     const s3ExtDeploy = new s3deploy.BucketDeployment(this, 'UploadCiCdScriptsExt', {
@@ -124,12 +121,13 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       destinationKeyPrefix: 'cicd_scripts/',
       retainOnDelete: true
     });
+    s3ExtDeploy.node.addDependency(this.deployBucket);
 
     //// CodeBuild Projects
     // Build Project
     const releaseProject = new codebuild.Project(this, 'releaseProject', {
       projectName: 'release_project',
-      role: this.deployRole,
+      role: deployRole,
       buildSpec: codebuild.BuildSpec.fromAsset('cicd/buildspec-release.yaml'),
       environmentVariables: {
         ACCOUNT_ID: { value: this.account },
@@ -140,6 +138,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
         privileged: false,
       },
     });
+    releaseProject.node.addDependency(this.deployBucket);
 
     //// Lambda Functions 
     // Function to run Release Codebuild Project

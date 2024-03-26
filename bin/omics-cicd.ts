@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import { OmicsCommonCicdStack } from '../lib/omics-cicd-stack-common';
 import { OmicsCicdPerWorkflowStack } from '../lib/omics-cicd-stack-per-workflow';
 import { OmicsDeployCommonResourcesStack } from '../lib/omics-deploy-common-resources-stack';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 const app = new cdk.App();
 
