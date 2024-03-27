@@ -4,9 +4,11 @@ import * as cdk from 'aws-cdk-lib';
 import { OmicsCommonCicdStack } from '../lib/omics-cicd-stack-common';
 import { OmicsCicdPerWorkflowStack } from '../lib/omics-cicd-stack-per-workflow';
 import { OmicsDeployCommonResourcesStack } from '../lib/omics-deploy-common-resources-stack';
-import * as iam from 'aws-cdk-lib/aws-iam';
+import { AwsSolutionsChecks } from 'cdk-nag'
 
 const app = new cdk.App();
+
+cdk.Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
 
 const envCICD = { account: app.node.tryGetContext('cicd_account'), region: app.node.tryGetContext('aws_region') };
 const envTest = { account: app.node.tryGetContext('test_account'), region: app.node.tryGetContext('aws_region') };
@@ -53,3 +55,5 @@ Object.keys(workflowNames).forEach(key => {
   cicdPerWorkflowResourcesStack.addDependency(cicdCommonResourcesStack);
 
 });
+
+// add cdk_nag test

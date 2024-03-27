@@ -2,12 +2,12 @@ import { Stack, StackProps, RemovalPolicy, Duration, CfnOutput } from 'aws-cdk-l
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as kms from 'aws-cdk-lib/aws-kms';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { DeployEnvironment } from "../types";
 import { OmicsWorkflowRole } from './omics-base';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { uriToS3Arn, uriToS3BucketArn } from './omics-base';
+import { NagSuppressions } from "cdk-nag";
 
 // extend the props of the stack by adding some params
 export interface OmicsCicdCommonStackProps extends StackProps {
@@ -21,14 +21,37 @@ export interface OmicsCicdCommonStackProps extends StackProps {
 export class OmicsCommonCicdStack extends Stack {
   public readonly crossAccountRole: iam.Role;
   public readonly deployRole: iam.Role;
-  public readonly pipelineKey: kms.Key;
   public readonly codePipelineRole: iam.Role;
   public readonly testFilesBucket: s3.Bucket;
-  //public readonly workflowsCodeRepo: codecommit.Repository;
   constructor(scope: Construct, id: string, props: OmicsCicdCommonStackProps) {
     super(scope, id, props);
 
-
+    NagSuppressions.addStackSuppressions(this, [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason: 'Solution requires permissions available in a managed policy'
+      },
+      {
+        id: 'AwsSolutions-IAM5',
+        reason: 'Solution requires permissions available in a managed policy'
+      },
+      {
+        id: 'AwsSolutions-S1',
+        reason: 'Server Access logging not applicable to CI/CD buckets'
+      },
+      {
+        id: 'AwsSolutions-CB4',
+        reason: 'Solution can be updated to apply end users encryption strategy'
+      },
+      {
+        id: 'AwsSolutions-KMS5',
+        reason: 'Key rotation not needed in S3_MANAGED'
+      },
+      {
+        id: 'AwsSolutions-L1',
+        reason: 'Unable to update runtime for custom resources'
+      }
+    ])
     //// IAM Resources
 
     //   IAM Custom Policies
@@ -40,10 +63,8 @@ export class OmicsCommonCicdStack extends Stack {
           'iam:PassRole',
         ],
         resources: [
-          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-readOnlyRole`,
-          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-deploy-role-*`,
-          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-file-publishing-*`,
-          `arn:aws:iam::${props.cicdEnv.env.account}:role/OmicsCicdMinimalStack*`
+          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-deploy-role-${props.cicdEnv.env.account}-${this.region}`,
+          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-file-publishing-${props.cicdEnv.env.account}-${this.region}`
         ]
       })],
     });
@@ -68,7 +89,7 @@ export class OmicsCommonCicdStack extends Stack {
         ]
       })],
     });
-
+    
     const cfnStacksPolicy = new iam.PolicyDocument({
       statements: [new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -76,22 +97,7 @@ export class OmicsCommonCicdStack extends Stack {
           'cloudformation:ListStacks',
         ],
         resources: [
-          'arn:aws:cloudformation:*:*:stack/*/*'
-        ]
-      })],
-    });
-
-    const deployKeyPolicy = new iam.PolicyDocument({
-      statements: [new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          "kms:Encrypt",
-          "kms:ReEncrypt*"
-        ],
-        resources: [
-          `arn:aws:kms:*:${props.deployEnv.env.account}:key/*`
+          `arn:aws:cloudformation:${props.cicdEnv.env.region}:${props.cicdEnv.env.account}:stack/*/*`
         ]
       })],
     });
@@ -100,7 +106,9 @@ export class OmicsCommonCicdStack extends Stack {
       statements: [new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
-          "s3:*",
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:PutObject"
         ],
         resources: [
           props.deployBucket.bucketArn,
@@ -127,11 +135,10 @@ export class OmicsCommonCicdStack extends Stack {
         CdkDeployPolicy: cdkDeployPolicy,
         StepFunctionCallPolicy: stepFunctCallPolicy,
         CfnStacksPolicy: cfnStacksPolicy,
-        DeployKeyPolicy: deployKeyPolicy,
         DeployBucketPolicy: deployBucketPolicy
       },
     });
-
+    
     if (props.sourceDataS3URIs) {
       const s3AccessPolicy = new iam.PolicyDocument({
         statements: [
@@ -152,6 +159,12 @@ export class OmicsCommonCicdStack extends Stack {
         })
       )
     }
+    NagSuppressions.addResourceSuppressions(codeBuildRole, [
+      {
+        id: 'AwsSolutions-IAM5',
+        reason: 'Need ability to describe all executions in Step Functions'
+      },
+    ])
 
 
     const codePipelineRole = new iam.Role(this, 'codePipelineRole', {
@@ -169,6 +182,7 @@ export class OmicsCommonCicdStack extends Stack {
         StepFunctionCallPolicy: stepFunctCallPolicy,
         CfnStacksPolicy: cfnStacksPolicy,
       },
+      
     });
 
     //// S3 Buckets
@@ -180,8 +194,9 @@ export class OmicsCommonCicdStack extends Stack {
       enforceSSL: true,
       versioned: false,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
     });
+
     testFilesBucket.grantReadWrite(codeBuildRole);
     testFilesBucket.grantReadWrite(codePipelineRole);
 
@@ -205,7 +220,6 @@ export class OmicsCommonCicdStack extends Stack {
       destinationKeyPrefix: 'cicd_scripts/',
       retainOnDelete: false
     });
-    
 
     // Dynamic Tests Project
     const omicsTesterRole = new OmicsWorkflowRole(this, 'omicsTesterRole', {
@@ -250,7 +264,7 @@ export class OmicsCommonCicdStack extends Stack {
     const runHealthOmicsWorkflowLambdaRole = new iam.Role(this, 'runHealthOmicsWorkflowLambdaRole', {
       roleName: "RunHealthOmicsWorkflowLambdaRole",
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      description: 'b',
+      description: '',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonOmicsFullAccess"),
         iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"),
@@ -267,7 +281,7 @@ export class OmicsCommonCicdStack extends Stack {
       this, "runHealthOmicsWorkflow",
       {
         functionName: "runHealthOmicsWorkflow",
-        runtime: lambda.Runtime.PYTHON_3_10,
+        runtime: lambda.Runtime.PYTHON_3_12,
         handler: "lambda_function.handler",
         timeout: Duration.seconds(300),
         code: lambda.Code.fromAsset("lambda/startHealthOmicsWorkflow/"),
@@ -283,17 +297,18 @@ export class OmicsCommonCicdStack extends Stack {
         actions: [
           "omics:GetRun",
         ],
-        resources: ['*']
+        resources: [`arn:aws:omics:${this.region}:${this.account}:run/*`]
       })],
     });
 
     const runHealthOmicsStateMachineRole = new iam.Role(this, 'runHealthOmicsStateMachineRole', {
       roleName: "RunHealthOmicsWorkflowStateMachineRole",
       assumedBy: new iam.ServicePrincipal('states.amazonaws.com'),
-      description: 'b',
+      description: 'Role assumed by the State Machine that will run the test AWS HealthOmics workflow',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AWSLambda_FullAccess"),
-        iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXrayFullAccess")
+        iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXrayFullAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("CloudWatchLogsFullAccess")
       ],
       inlinePolicies: {
         OmicsGetRunPolicy: omicsGetRunPolicy   

@@ -1,71 +1,71 @@
 {
-    "Comment": "StateMachine to orchestrate end-to-end Omics Workflow",
-    "StartAt": "PrepareInputs",
-    "States": {
-      "PrepareInputs": {
-        "Type": "Pass",
-        "ResultPath": "$.workflow",
-        "Next": "RunOmicsWorkflowLambda"
-      },
-      "RunOmicsWorkflowLambda": {
-        "InputPath": "$",
-        "Next": "WaitForOmicsWorkflow",
-        "Parameters": {
-          "FunctionName": "${HealthOmicsWorkflowLambdaName}",
-          "Payload": {
-            "WorkflowStagingS3Path": "${HealthOmicsWorkflowStagingS3}",
-            "WorkflowParamsFile": "${HealthOmicsWorkflowParamsFile}",
-            "WorkflowId.$": "$.id",
-            "CommitId.$": "$.tags.COMMIT_ID",
-            "JobRoleArn": "${HealthOmicsWorkflowJobRole}",
-            "OutputS3Path": "${HealthOmicsWorkflowOutputS3}"
-          }
-        },
-        "Resource": "arn:aws:states:::lambda:invoke",
-        "ResultSelector": {
-          "workflow.$": "$.Payload"
-        },
-        "ResultPath": "$.workflow",
-        "Type": "Task"
-      },
-      "WaitForOmicsWorkflow": {
-        "Next": "CheckOmicsWorkflow",
-        "Seconds": 60,
-        "Type": "Wait"
-      },
-      "CheckOmicsWorkflow": {
-        "InputPath": "$",
-        "Next": "OmicsWorkflowDone?",
-        "Parameters": {
-          "Id.$": "$.workflow.workflow.WorkflowRunId"
-        },
-        "Resource": "arn:aws:states:::aws-sdk:omics:getRun",
-        "ResultPath": "$.workflow.workflow.status",
-        "Type": "Task"
-      },
-      "OmicsWorkflowDone?": {
-        "Choices": [
-          {
-            "Next": "SuccessState",
-            "StringEquals": "COMPLETED",
-            "Variable": "$.workflow.workflow.status.Status"
-          },
-          {
-            "Next": "OmicsWorkflowFailed",
-            "StringEquals": "FAILED",
-            "Variable": "$.workflow.workflow.status.Status"
-          }
-        ],
-        "Default": "WaitForOmicsWorkflow",
-        "Type": "Choice"
-      },
-      "OmicsWorkflowFailed": {
-        "Cause": "Omics Workflow Failed",
-        "Error": "$.workflow.workflow.status.message",
-        "Type": "Fail"
-      },
-      "SuccessState": {
-        "Type": "Succeed"
-      }
-    }
-  }
+	"Comment": "StateMachine to orchestrate end-to-end Omics Workflow",
+	"StartAt": "PrepareInputs",
+	"States": {
+		"PrepareInputs": {
+			"Type": "Pass",
+			"ResultPath": "$.workflow",
+			"Next": "RunOmicsWorkflowLambda"
+		},
+		"RunOmicsWorkflowLambda": {
+			"InputPath": "$",
+			"Next": "WaitForOmicsWorkflow",
+			"Parameters": {
+				"FunctionName": "${HealthOmicsWorkflowLambdaName}",
+				"Payload": {
+					"WorkflowStagingS3Path": "${HealthOmicsWorkflowStagingS3}",
+					"WorkflowParamsFile": "${HealthOmicsWorkflowParamsFile}",
+					"WorkflowId.$": "$.id",
+					"CommitId.$": "$.tags.COMMIT_ID",
+					"JobRoleArn": "${HealthOmicsWorkflowJobRole}",
+					"OutputS3Path": "${HealthOmicsWorkflowOutputS3}"
+				}
+			},
+			"Resource": "arn:aws:states:::lambda:invoke",
+			"ResultSelector": {
+				"workflow.$": "$.Payload"
+			},
+			"ResultPath": "$.workflow",
+			"Type": "Task"
+		},
+		"WaitForOmicsWorkflow": {
+			"Next": "CheckOmicsWorkflow",
+			"Seconds": 60,
+			"Type": "Wait"
+		},
+		"CheckOmicsWorkflow": {
+			"InputPath": "$",
+			"Next": "OmicsWorkflowDone?",
+			"Parameters": {
+				"Id.$": "$.workflow.workflow.WorkflowRunId"
+			},
+			"Resource": "arn:aws:states:::aws-sdk:omics:getRun",
+			"ResultPath": "$.workflow.workflow.status",
+			"Type": "Task"
+		},
+		"OmicsWorkflowDone?": {
+			"Choices": [
+				{
+					"Next": "SuccessState",
+					"StringEquals": "COMPLETED",
+					"Variable": "$.workflow.workflow.status.Status"
+				},
+				{
+					"Next": "OmicsWorkflowFailed",
+					"StringEquals": "FAILED",
+					"Variable": "$.workflow.workflow.status.Status"
+				}
+			],
+			"Default": "WaitForOmicsWorkflow",
+			"Type": "Choice"
+		},
+		"OmicsWorkflowFailed": {
+			"Cause": "Omics Workflow Failed",
+			"Error": "$.workflow.workflow.status.message",
+			"Type": "Fail"
+		},
+		"SuccessState": {
+			"Type": "Succeed"
+		}
+	}
+}

@@ -7,6 +7,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import { NagSuppressions } from "cdk-nag";
 
 // extend the props of the stack by adding some params
 export interface OmicsDeployResourcesProps extends StackProps {
@@ -24,6 +25,32 @@ export class OmicsDeployCommonResourcesStack extends Stack {
   constructor(scope: Construct, id: string, props: OmicsDeployResourcesProps) {
     super(scope, id, props);
 
+    NagSuppressions.addStackSuppressions(this, [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason: 'Solution requires permissions available in a managed policy'
+      },
+      {
+        id: 'AwsSolutions-IAM5',
+        reason: 'Solution requires permissions available in a managed policy'
+      },
+      {
+        id: 'AwsSolutions-S1',
+        reason: 'Server Access logging not applicable to CI/CD buckets'
+      },
+      {
+        id: 'AwsSolutions-CB4',
+        reason: 'Solution can be updated to apply end users encryption strategy'
+      },
+      {
+        id: 'AwsSolutions-KMS5',
+        reason: 'Key rotation not needed in S3_MANAGED'
+      },
+      {
+        id: 'AwsSolutions-L1',
+        reason: 'Unable to update runtime for custom resources'
+      }
+    ])
     //// IAM Resources
     // IAM Policies
     // IAM Custom Policies
@@ -107,7 +134,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
-    
+
     this.deployBucket.grantRead(new iam.AccountPrincipal(props.cicdEnv.env.account));
     this.deployBucket.grantPut(new iam.AccountPrincipal(props.cicdEnv.env.account));
     this.deployBucket.grantRead(deployRole);
@@ -146,7 +173,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       this, "runReleaseBuildProject",
       {
         functionName: 'runReleaseBuildProject',
-        runtime: lambda.Runtime.PYTHON_3_10,
+        runtime: lambda.Runtime.PYTHON_3_12,
         handler: "lambda_function.lambda_handler",
         timeout: Duration.seconds(300),
         code: lambda.Code.fromAsset("lambda/runReleaseBuildProject/"),
