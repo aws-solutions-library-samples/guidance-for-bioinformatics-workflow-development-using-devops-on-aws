@@ -1,3 +1,5 @@
+# Copyright Amazon.com, Inc. or its affiliates.
+
 import json
 import sys
 import argparse
