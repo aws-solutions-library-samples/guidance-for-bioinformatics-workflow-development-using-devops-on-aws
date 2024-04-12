@@ -290,6 +290,7 @@ export class OmicsCommonCicdStack extends Stack {
         role: runHealthOmicsWorkflowLambdaRole,
         environment: {
         },
+        tracing: lambda.Tracing.ACTIVE
       }
     );
     

@@ -182,7 +182,8 @@ export class OmicsDeployCommonResourcesStack extends Stack {
         role: runReleaseBuildLambdaRole,
         environment: {
           CICD_ACCOUNT_ID: props.cicdEnv.env.account
-        }
+        },
+        tracing: lambda.Tracing.ACTIVE
       }
     );
 
