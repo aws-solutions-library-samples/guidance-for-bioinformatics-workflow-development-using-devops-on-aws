@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright Amazon.com, Inc. or its affiliates.
+
 # Script to set the environment variables for the workflow version
 # This script takes information from the workflow manifest and sets the environment variables accordingly
 # It currently only supports the version pattern Major.minor.patch from nextflow.config manifest

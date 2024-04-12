@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates.
+
 import { Stack, StackProps, RemovalPolicy, Duration, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';

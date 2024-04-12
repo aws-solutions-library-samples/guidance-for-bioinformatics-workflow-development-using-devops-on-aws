@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates.
+
 import { URL } from 'node:url';
 
 import * as cdk from 'aws-cdk-lib';

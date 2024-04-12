@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Copyright Amazon.com, Inc. or its affiliates.
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { OmicsCommonCicdStack } from '../lib/omics-cicd-stack-common';

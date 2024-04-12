@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright Amazon.com, Inc. or its affiliates.
+
 cd $BASEDIR
 
 LAUNCHED="y"

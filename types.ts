@@ -1,3 +1,4 @@
+// Copyright Amazon.com, Inc. or its affiliates.
 export interface DeployEnvironment {
   /**
    * Designated name of environment.

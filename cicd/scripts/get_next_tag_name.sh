@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright Amazon.com, Inc. or its affiliates.
 
 # BUILD version from arguments
 # Get current branch name

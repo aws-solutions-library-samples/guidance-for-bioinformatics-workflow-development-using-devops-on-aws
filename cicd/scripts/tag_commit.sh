@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright Amazon.com, Inc. or its affiliates.
+
 set -euxo pipefail
 
 # build version from arguments
