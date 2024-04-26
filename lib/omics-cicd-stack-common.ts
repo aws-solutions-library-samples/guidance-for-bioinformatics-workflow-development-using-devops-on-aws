@@ -196,7 +196,8 @@ export class OmicsCommonCicdStack extends Stack {
       enforceSSL: true,
       versioned: false,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      serverAccessLogsPrefix: "access-logs"
     });
 
     testFilesBucket.grantReadWrite(codeBuildRole);
@@ -211,6 +212,7 @@ export class OmicsCommonCicdStack extends Stack {
       versioned: false,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      serverAccessLogsPrefix: "access-logs"
     });
     cicdScriptsBucket.grantReadWrite(codeBuildRole);
     cicdScriptsBucket.grantReadWrite(codePipelineRole);
@@ -290,6 +292,7 @@ export class OmicsCommonCicdStack extends Stack {
         role: runHealthOmicsWorkflowLambdaRole,
         environment: {
         },
+        tracing: lambda.Tracing.ACTIVE
       }
     );
     

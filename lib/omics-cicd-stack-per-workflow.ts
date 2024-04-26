@@ -132,7 +132,8 @@ export class OmicsCicdPerWorkflowStack extends Stack {
             logGroupArn: omicsStateMachineLogGroup.logGroupArn,
           },
         }],
-      }
+      },
+      tracingConfiguration: { enabled: true }
     });
     NagSuppressions.addResourceSuppressions(omicsWorkflowStateMachine, [
       {
