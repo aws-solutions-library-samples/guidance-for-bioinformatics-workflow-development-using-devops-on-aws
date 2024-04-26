@@ -135,6 +135,7 @@ export class OmicsDeployCommonResourcesStack extends Stack {
       versioned: false,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      serverAccessLogsPrefix: "access-logs"
     });
 
     this.deployBucket.grantRead(new iam.AccountPrincipal(props.cicdEnv.env.account));
