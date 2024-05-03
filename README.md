@@ -1,8 +1,8 @@
-# Guidance for Bioinformatics workflow CI/CD on AWS
+# Guidance for Bioinformatics workflow development using DevOps on AWS
 
 ## Table of Contents
 
-- [Guidance for Bioinformatics workflow CI/CD on AWS](#guidance-for-bioinformatics-workflow-cicd-on-aws)
+- [Guidance for Bioinformatics workflow development using DevOps on AWS](#guidance-for-bioinformatics-workflow-development-using-devops-on-aws)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
     - [Cost](#cost)
