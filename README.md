@@ -154,7 +154,7 @@ This guidance is best suited for regions where AWS HealthOmics is [available](ht
 
 4. Change directory to the current repository folder and install `npm` packages
     ```bash
-    cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
+    cd guidance-for-bioinformatics-workflow-development-using-devops-on-aws
     npm install
     ```
 
@@ -222,7 +222,7 @@ This guidance is best suited for regions where AWS HealthOmics is [available](ht
    
    The following command will deploy resources in your CI/CD, testing, and production accounts.
    ```bash
-   cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
+   cd guidance-for-bioinformatics-workflow-development-using-devops-on-aws
    npx cdk deploy --profile cicd --all
    ```
 
@@ -421,7 +421,7 @@ This guidance uses AWS CodeCommit for source code repositories. If needed you ca
 
 To remove resources created when deploying this guidance run:
 ```bash
-cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
+cd guidance-for-bioinformatics-workflow-development-using-devops-on-aws
 npx cdk destroy --profile cicd --all
 ```
 
