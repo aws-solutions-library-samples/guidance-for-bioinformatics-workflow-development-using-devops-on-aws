@@ -154,7 +154,7 @@ This guidance is best suited for regions where AWS HealthOmics is [available](ht
 
 4. Change directory to the current repository folder and install `npm` packages
     ```bash
-    cd guidance-for-bioinformatics-workflow-ci-cd-on-aws
+    cd guidance-for-bioinformatics-workflow-development-using-devops-on-aws
     npm install
     ```
 
