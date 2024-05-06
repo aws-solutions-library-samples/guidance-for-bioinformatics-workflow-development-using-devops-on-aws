@@ -23,12 +23,14 @@ const buildRoleName = 'omicsCiCdCodeBuildRole';
 // Stacks for common resources
 const deployCommonResourcesStack = new OmicsDeployCommonResourcesStack(app, 'OmicsDeployCommonResourcesStack', {
   env: envProd,
+  description: "PROD Common - Guidance for Bioinformatics Workflow Development using DevOps on AWS (SO9434)",
   buildRoleName: buildRoleName,
   cicdEnv: { name: "CICD", env: envCICD }
 });
 
 const cicdCommonResourcesStack = new OmicsCommonCicdStack(app, 'OmicsCicdCommonStack', {
   env: envCICD,
+  description: "CICD Common - Guidance for Bioinformatics Workflow Development using DevOps on AWS (SO9434)",
   cicdEnv: { name: "cicd", env: envCICD },
   buildRoleName: buildRoleName,
   deployEnv: { name: "test", env: envTest },
@@ -43,6 +45,7 @@ Object.keys(workflowNames).forEach(key => {
   // Stack for workflow specific CICD resources
   const cicdPerWorkflowResourcesStack = new OmicsCicdPerWorkflowStack(app, `OmicsCicdPerWorkflowStack-${key}`, {
     env: envCICD,
+    description: `Workflow ${key} - Guidance for Bioinformatics Workflow Development using DevOps on AWS (SO9434)`,
     workflowName: key,
     workflowCodeRepo: workflowNames[key],
     projectBranch: projectBranch,
