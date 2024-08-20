@@ -66,7 +66,7 @@ export class OmicsCommonCicdStack extends Stack {
         ],
         resources: [
           `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-deploy-role-${props.cicdEnv.env.account}-${this.region}`,
-          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-file-publishing-${props.cicdEnv.env.account}-${this.region}`
+          `arn:aws:iam::${props.cicdEnv.env.account}:role/cdk-hnb659fds-file-publishing-role-${props.cicdEnv.env.account}-${this.region}`
         ]
       })],
     });

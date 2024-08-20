@@ -341,7 +341,7 @@ The following instructions assume you have cloned the solution repository to you
     * `parameter-template.json`: This is an additional file that is used when deploying the workflow to AWS HealthOmics. It specifies the top level parameters your workflow takes. For more information on what this looks like see [AWS HealthOmics Documentation](https://docs.aws.amazon.com/omics/latest/dev/parameter-templates.html)
     * `test.parameters.json`: This is an additional file that is used to run end-to-end (aka "dynamic") tests of your workflow using AWS HealthOmics. It provides test values for for any required top level parameters for the workflow. Note that any S3 and ECR URIs used should be accessible by AWS HealthOmics and consistent with the region the workflow is deployed to. It can have placeholder variables of `{{region}}` and `{{staging_uri}}` which are replaced with the AWS region name the workflow is tested in, and a deployment generated staging S3 URI used for testing artifacts, respectively.
 
-        :warning: **NOTE** :warning: This solution creates and stages a file named `samplesheet.csv` that is used as a workflow input specific to this example workflow. Make sure you update the `input` property in `test.parameters.json` accordingly.
+        :warning: **NOTE** :warning: This solution creates and stages a file named `samplesheet.csv` that is used as a workflow input specific to this example workflow. Make sure you update the `input` property in `test.parameters.json` accordingly. In this example workflow, replaces `samplesheet-fastqc.csv` to `samplesheet.csv` to make it compatible with this solution.
   
     If you updated any files save them.
 
